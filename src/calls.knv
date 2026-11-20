@@ -1,0 +1,105 @@
+(use outline definition)
+
+(export acyclic-callers)
+
+(type acyclic-callers
+  (fn ((ref (vec definition))
+       (ref definition))
+    (vec definition)))
+
+(defn acyclic-callers (members callee)
+  (-> members iter
+      (filter (fn (caller)
+                (calls? (deref caller) callee)))
+      (filter (fn (caller)
+                (not (reaches? members (:name callee) (:name caller)))))
+      (map clone)
+      collect))
+
+(type calls?
+  (fn ((ref definition) (ref definition))
+    bool))
+
+(defn calls? (caller callee)
+  (and (not= (:name caller) (:name callee))
+       (contains? (:references caller)
+                  (clone (:name callee)))))
+
+(type reaches?
+  (fn ((ref (vec definition))
+       (ref string)
+       (ref string))
+    bool))
+
+(defn reaches? (members start target)
+  (search members
+          (vec (clone start))
+          (vec)
+          target))
+
+(type search
+  (fn ((ref (vec definition))
+       (vec string)
+       (vec string)
+       (ref string))
+    bool))
+
+(defn search (members frontier visited target)
+  (match (pop! frontier)
+    (none false)
+    ((some name) (visit members frontier visited target name))))
+
+(type visit
+  (fn ((ref (vec definition))
+       (vec string)
+       (vec string)
+       (ref string)
+       string)
+    bool))
+
+(defn visit (members frontier visited target name)
+  (cond
+    ((contains? visited (clone name))
+     (search members frontier visited target))
+    (else (expand members frontier visited target name))))
+
+(type expand
+  (fn ((ref (vec definition))
+       (vec string)
+       (vec string)
+       (ref string)
+       string)
+    bool))
+
+(defn expand (members frontier visited target name)
+  (let (next (callees-of members (as-str name)))
+    (if (contains? next (clone target))
+      true
+      (do
+        (push! visited name)
+        (for-each (iter next)
+          (fn (callee)
+            (push! frontier (clone callee))))
+        (search members frontier visited target)))))
+
+(type callees-of
+  (fn ((ref (vec definition)) (ref str))
+    (vec string)))
+
+(defn callees-of (members name)
+  (-> members iter
+      (filter (fn (member) (= (:name member) name)))
+      (map (fn (member)
+             (clone (:references member))))
+      collect flatten-names))
+
+(type flatten-names
+  (fn ((vec (vec string))) (vec string)))
+
+(defn flatten-names (groups)
+  (let (found (vec))
+    (for-each (iter groups)
+      (fn (names)
+        (for-each (iter names)
+          (fn (name) (push! found (clone name))))))
+    found))

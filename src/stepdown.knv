@@ -1,0 +1,108 @@
+(use calls acyclic-callers)
+(use outline definition role visibility)
+
+(use violations ->violation collected-violations rule
+                violation)
+
+(export group stepdown-groups stepdown-violations)
+
+(def stepdown-groups
+  (vec group/public-types group/private-types
+       group/constants group/public-routines
+       group/private-routines))
+
+(defenum group
+  public-types
+  private-types
+  constants
+  public-routines
+  private-routines)
+
+(type stepdown-violations
+  (fn ((ref (vec definition)) group)
+    (vec violation)))
+
+(defn stepdown-violations (definitions group)
+  (let (members (group-members definitions group))
+    (-> members iter
+        (map (fn (member)
+               (callee-above-callers (ref members) member group)))
+        collect collected-violations)))
+
+(type group-members
+  (fn ((ref (vec definition)) group)
+    (vec definition)))
+
+(defn group-members (definitions group)
+  (-> definitions iter
+      (filter (fn (definition)
+                (member? group (:role definition))))
+      (map clone)
+      collect))
+
+(type callee-above-callers
+  (fn ((ref (vec definition))
+       (ref definition)
+       group)
+    (option violation)))
+
+(defn callee-above-callers (members callee group)
+  (let (callers (acyclic-callers members callee))
+    (match (first callers)
+      (none none)
+      ((some first-caller)
+       (above-caller callee first-caller group)))))
+
+(type above-caller
+  (fn ((ref definition) (ref definition) group)
+    (option violation)))
+
+(defn above-caller (callee caller group)
+  (if (< (:line callee) (:line caller))
+    (some (stepdown-violation callee caller group))
+    none))
+
+(defn stepdown-violation (callee caller group)
+  (->violation :rule (group->rule group)
+               :subject (clone callee)
+               :witness (some (clone caller))))
+
+(defn member? (group role)
+  (match group
+    (public-types (public-type? role))
+    (private-types (private-type? role))
+    (constants (constant? role))
+    (public-routines (public-routine? role))
+    (private-routines (private-routine? role))))
+
+(defn group->rule (group)
+  (match group
+    (public-types rule/type-stepdown)
+    (private-types rule/type-stepdown)
+    (constants rule/constant-stepdown)
+    (public-routines rule/function-stepdown)
+    (private-routines rule/function-stepdown)))
+
+(defn public-type? (role)
+  (match role
+    ((data-type visibility/exported) true)
+    (_ false)))
+
+(defn private-type? (role)
+  (match role
+    ((data-type visibility/private) true)
+    (_ false)))
+
+(defn constant? (role)
+  (match role (constant true) (_ false)))
+
+(defn public-routine? (role)
+  (match role
+    ((routine visibility/private) false)
+    ((routine _) true)
+    (_ false)))
+
+(defn private-routine? (role)
+  (match role
+    ((routine visibility/private) true)
+    (_ false)))

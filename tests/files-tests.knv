@@ -2,13 +2,18 @@
 
 (deftest finds-the-source-files-in-sorted-order
   (assert (= (knave-files-under "src")
-             (vec (str "src/files.knv")
+             (vec (str "src/calls.knv")
+                  (str "src/files.knv")
                   (str "src/lib.knv")
                   (str "src/main.knv")
+                  (str "src/ordering.knv")
                   (str "src/outline.knv")
                   (str "src/reader.knv")
                   (str "src/report.knv")
-                  (str "src/rules.knv")))))
+                  (str "src/rules.knv")
+                  (str "src/signatures.knv")
+                  (str "src/stepdown.knv")
+                  (str "src/violations.knv")))))
 
 (deftest ignores-files-that-are-not-knv
   (assert (= (knave-files-under "tests/fixtures") (vec))))

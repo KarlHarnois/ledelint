@@ -1,0 +1,50 @@
+(use outline definition role)
+
+(use violations ->violation collected-violations rule
+                violation)
+
+(export signature-violations)
+
+(type signature-violations
+  (fn ((ref (vec definition)))
+    (vec violation)))
+
+(defn signature-violations (definitions)
+  (-> (range 0 (len definitions))
+      (map (fn (position) (detached-signature definitions position)))
+      collect collected-violations))
+
+(type detached-signature
+  (fn ((ref (vec definition)) int)
+    (option violation)))
+
+(defn detached-signature (definitions position)
+  (let (subject (at definitions position)
+        next (-> definitions (get (inc position))))
+    (if (and (signature? subject)
+             (not (defines? next (:name subject))))
+      (some (->violation :rule rule/signature-adjacent
+                         :subject (clone subject)
+                         :witness (map-some next clone)))
+      none)))
+
+(defn signature? (definition)
+  (match (:role definition)
+    (signature true)
+    (_ false)))
+
+(type defines?
+  (fn ((option (ref definition)) (ref string))
+    bool))
+
+(defn defines? (next name)
+  (match next
+    (none false)
+    ((some definition)
+     (and (= (:name definition) (clone name))
+          (routine? (:role definition))))))
+
+(defn routine? (role)
+  (match role
+    ((routine _) true)
+    (_ false)))

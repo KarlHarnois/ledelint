@@ -1,0 +1,33 @@
+(use calls acyclic-callers)
+(use outline forms->definitions)
+(use reader text->forms)
+
+(deftest keeps-a-caller-of-a-callee
+  (let (definitions (definitions-of "(defn tax (total) total)\n\n(defn order-total (order) (tax order))")
+        tax (unwrap (named (str "tax") (ref definitions))))
+    (assert (= (names (acyclic-callers (ref definitions) (ref tax)))
+               (vec (str "order-total"))))))
+
+(deftest drops-a-caller-in-a-cycle
+  (let (definitions (definitions-of
+                      "(defn ping () (pong))\n\n(defn pong () (ping))")
+        ping (unwrap (named (str "ping") (ref definitions))))
+    (assert (= (acyclic-callers (ref definitions) (ref ping))
+               (vec)))))
+
+(defn names (definitions)
+  (-> definitions iter
+      (map (fn (definition)
+             (clone (:name definition))))
+      collect))
+
+(defn named (name definitions)
+  (-> definitions iter
+      (find (fn (definition)
+              (= (:name definition) name)))
+      (map-some clone)))
+
+(defn definitions-of (text)
+  (match (text->forms text)
+    ((ok forms) (forms->definitions forms))
+    ((err _) (vec))))

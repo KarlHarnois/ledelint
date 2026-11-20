@@ -1,5 +1,5 @@
 (use outline definition)
-(use rules rule violation)
+(use violations rule violation)
 
 (export problem->line violation->line)
 

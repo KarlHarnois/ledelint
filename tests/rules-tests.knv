@@ -1,6 +1,7 @@
 (use outline forms->definitions)
 (use reader text->forms)
-(use rules definitions->violations rule)
+(use rules definitions->violations)
+(use violations rule)
 
 (deftest newspaper-layout-passes
   (assert (= (findings (unwrap-ok (fixture "newspaper")))

@@ -1,0 +1,20 @@
+(use outline forms->definitions)
+(use reader text->forms)
+(use violations ->violation collected-violations rule)
+
+(deftest keeps-present-violations
+  (let (subject (unwrap (first (definitions-of "(def tax 1)")))
+        finding (->violation :rule rule/section-order
+                             :subject (clone subject)
+                             :witness none))
+    (assert (= (collected-violations (vec (some (clone finding))))
+               (vec finding)))))
+
+(deftest drops-missing-violations
+  (assert (= (collected-violations (vec none))
+             (vec))))
+
+(defn definitions-of (text)
+  (match (text->forms text)
+    ((ok forms) (forms->definitions forms))
+    ((err _) (vec))))
