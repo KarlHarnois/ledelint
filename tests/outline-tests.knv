@@ -7,11 +7,6 @@
       (map (fn (definition) (:role definition)))
       collect))
 
-(defn references (text)
-  (match (-> (outline text) first)
-    (none (vec))
-    ((some definition) (clone (:references definition)))))
-
 (defn outline (text)
   (match (text->forms text)
     ((ok forms) (forms->definitions forms))
@@ -31,28 +26,6 @@
 (deftest def-with-a-function-signature-is-a-routine
   (assert (= (roles "(type walk (fn (int) int))\n(def walk (rust \"{0}\" (fn (int) int)))")
              (vec role/signature (role/routine visibility/private)))))
-
-(deftest struct-references-its-field-types
-  (assert (= (references "(defstruct order :status payment-status :items (vec line-item))")
-             (vec (str "payment-status")
-                  (str "vec")
-                  (str "line-item")))))
-
-(deftest enum-case-names-are-not-references
-  (assert (= (references "(defenum payment paid (refunded money))")
-             (vec (str "money")))))
-
-(deftest local-names-are-not-references
-  (assert (= (references "(defn total (order) (let (tax 1) (match (sum order) ((some found) (add found tax)))))")
-             (vec (str "let")
-                  (str "1")
-                  (str "match")
-                  (str "sum")
-                  (str "add")))))
-
-(deftest constructors-and-enum-cases-reference-their-type
-  (assert (= (references "(defn build () (->order :status payment/paid))")
-             (vec (str "order") (str "payment")))))
 
 (deftest test-forms-have-their-own-role
   (assert (= (roles "(deftest adds-one (assert true))")

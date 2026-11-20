@@ -1,0 +1,117 @@
+(use forms children head-is? head-name items? tail)
+(use reader shape)
+
+(export form->references)
+
+(defn form->references (form)
+  (let (bound (bound-names form)
+        found (vec))
+    (for-each (iter (referencing-forms form))
+      (fn (child)
+        (push-atoms! (mut found) child)))
+    (-> found iter
+        (filter (fn (name)
+                  (not (contains? bound (clone (deref name))))))
+        (map clone)
+        collect)))
+
+(defn bound-names (form)
+  (let (found (vec))
+    (push-bound-names! (mut found) form)
+    found))
+
+(defn referencing-forms (form)
+  (if (head-is? form "defenum")
+    (enum-case-types form)
+    (tail (children form) 2)))
+
+(defn push-atoms! (found form)
+  (match (:shape form)
+    ((atom name) (push-reference! found name))
+    ((items forms)
+     (for-each (iter forms)
+       (fn (child) (push-atoms! found child))))
+    (text (do))))
+
+(defn push-reference! (found name)
+  (match (atom->reference name)
+    ((some reference) (push! found reference))
+    (none (do))))
+
+(type atom->reference
+  (fn ((ref string)) (option string)))
+
+(defn atom->reference (name)
+  (cond
+    ((starts-with? name ":") none)
+    ((starts-with? name "->")
+     (some (str (subs name 2 (len name)))))
+    (else (some (before-slash name)))))
+
+(defn before-slash (name)
+  (match (-> (as-str name) (split "/") collect first)
+    (none (clone name))
+    ((some part) (str part))))
+
+(defn push-bound-names! (found form)
+  (let (forms (children form))
+    (match (head-name form)
+      (none (do))
+      ((some head) (push-binder-names! found (as-str head) forms)))
+    (for-each (iter forms)
+      (fn (child) (push-bound-names! found child)))))
+
+(defn push-binder-names! (found head forms)
+  (cond
+    ((contains? (vec "let" "let-try" "let-match" "loop") head)
+     (push-binding-list! found forms))
+    ((contains? (vec "defn" "fn") head)
+     (push-parameter-list! found forms))
+    ((= head "match") (push-pattern-names! found forms))
+    (else (do))))
+
+(defn push-binding-list! (found forms)
+  (match (get forms 1)
+    (none (do))
+    ((some bindings)
+     (push-binding-patterns! found (children bindings)))))
+
+(defn push-parameter-list! (found forms)
+  (let (parameters (-> forms iter
+                       (find (fn (form) (items? form)))))
+    (match parameters
+      (none (do))
+      ((some list) (push-all-atoms! found list)))))
+
+(defn push-pattern-names! (found forms)
+  (for-each (iter (tail forms 2))
+    (fn (arm)
+      (match (-> (children arm) first)
+        (none (do))
+        ((some pattern) (push-all-atoms! found pattern))))))
+
+(defn push-binding-patterns! (found bindings)
+  (for-each (-> bindings iter enumerate)
+    (fn (entry)
+      (when (even? (first entry))
+        (push-all-atoms! found (second entry))))))
+
+(defn push-all-atoms! (found form)
+  (match (:shape form)
+    ((atom name) (push! found (clone name)))
+    ((items forms)
+     (for-each (iter forms)
+       (fn (child) (push-all-atoms! found child))))
+    (text (do))))
+
+(defn enum-case-types (form)
+  (let (found (vec))
+    (for-each (iter (tail (children form) 2))
+      (fn (enum-case)
+        (push-case-types! (mut found) enum-case)))
+    found))
+
+(defn push-case-types! (found enum-case)
+  (for-each (iter (tail (children enum-case) 1))
+    (fn (case-type)
+      (push! found (clone case-type)))))
