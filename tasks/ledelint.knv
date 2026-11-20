@@ -1,5 +1,5 @@
-(use lib run)
+(use lib ->settings run)
 
 (deftask ledelint (:path string ".")
   "Checks that each Knave file reads top-down, like a newspaper."
-  (run (as-str path)))
+  (run (->settings :root (str path))))

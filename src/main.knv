@@ -1,8 +1,8 @@
-(use lib run)
+(use lib ->settings run)
 
 (defn main ()
   (let (arguments (command-line-args))
-    (run (root-argument arguments))))
+    (run (->settings :root (root-argument arguments)))))
 
 (type root-argument
   (fn ((ref (vec string))) string))

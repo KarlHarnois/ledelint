@@ -4,14 +4,13 @@
 (use report problem->line violation->line)
 (use rules definitions->violations)
 
-(export run)
+(export ->settings run settings)
 
 (defstruct settings
   :root string)
 
-(defn run (root)
-  (let (settings (->settings :root (str root))
-        problems (settings->problems settings))
+(defn run (settings)
+  (let (problems (settings->problems settings))
     (for-each (iter problems)
       (fn (problem) (println problem)))
     (when (not (empty? problems))
