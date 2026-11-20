@@ -1,0 +1,133 @@
+(def binary-path "target/knave/ledelint/ledelint")
+
+(def clean-source
+  (str "(defn order-total (order) (tax order))\n" "\n"
+       "(defn tax (total) total)\n"))
+
+(def dirty-source
+  (str "(defn tax (total) total)\n" "\n"
+       "(defn order-total (order) (tax order))\n"))
+
+(def broken-source (str "(defn total (order)\n"))
+
+(def process-id
+  (rust "std::process::id()" (fn () u32)))
+
+(def temp-directory
+  (rust "std::env::temp_dir().display().to_string()"
+    (fn () string)))
+
+(def run-raw
+  (rust "std::process::Command::new({0}).args({1}).output().map(|output| (output.status.code().unwrap_or(-1), (String::from_utf8_lossy(&output.stdout).to_string(), String::from_utf8_lossy(&output.stderr).to_string()))).map_err(|failure| failure.to_string())"
+    (fn ((ref str) (ref (vec string)))
+      (result (pair i32 (pair string string)) string))))
+
+(def once
+  (rust "{{ static BUILT: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *BUILT.get_or_init({0}) }}"
+    (fn ((fn () bool)) bool)))
+
+(defstruct command
+  :program string
+  :args (vec string))
+
+(defstruct run-output
+  :code i32
+  :stdout string
+  :stderr string)
+
+(deftest clean-tree-passes
+  (let (root (scratch-root "clean")
+        path (file-path root "clean.knv"))
+    (write-file! (as-str path) (as-str clean-source))
+    (let (output (unwrap-ok (run-ledelint root (vec))))
+      (assert (= (:code output) 0))
+      (assert (= (:stdout output) ""))
+      (assert (= (:stderr output) "")))))
+
+(deftest dirty-tree-reports-on-stdout-and-exits-one
+  (let (root (scratch-root "dirty")
+        path (file-path root "report.knv"))
+    (write-file! (as-str path) (as-str dirty-source))
+    (let (output (unwrap-ok (run-ledelint root (vec))))
+      (assert (= (:code output) 1))
+      (assert (= (:stdout output)
+                 (str path
+                      ":1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it\n")))
+      (assert (= (:stderr output) "ledelint found 1 problem(s)\n")))))
+
+(deftest github-flag-prints-a-workflow-annotation
+  (let (root (scratch-root "github")
+        path (file-path root "report.knv"))
+    (write-file! (as-str path) (as-str dirty-source))
+    (let (output (unwrap-ok (run-ledelint root (vec (str "--github")))))
+      (assert (= (:code output) 1))
+      (assert (= (:stdout output)
+                 (str "::error file=" path
+                      ",line=1,title=ledelint function-stepdown::`tax` is used by `order-total` (line 3), so it belongs below it\n"))))))
+
+(deftest unreadable-source-is-reported
+  (let (root (scratch-root "broken")
+        path (file-path root "broken.knv"))
+    (write-file! (as-str path) (as-str broken-source))
+    (let (output (unwrap-ok (run-ledelint root (vec))))
+      (assert (= (:code output) 1))
+      (assert (= (:stdout output)
+                 (str path
+                      ":1: unreadable: the list opened on line 1 is never closed\n"))))))
+
+(deftest skips-target-and-git-directories
+  (let (root (scratch-root "skipped")
+        target (file-path (file-path root "target") "hidden.knv")
+        git (file-path (file-path root ".git") "hidden.knv"))
+    (write-file! (as-str target) (as-str dirty-source))
+    (write-file! (as-str git) (as-str dirty-source))
+    (let (output (unwrap-ok (run-ledelint root (vec))))
+      (assert (= (:code output) 0))
+      (assert (= (:stdout output) "")))))
+
+(defn run-ledelint (root args)
+  (let (all (vec root))
+    (for-each (iter args)
+      (fn (arg) (push! all (clone arg))))
+    (run-command (->command :program (str (binary)) :args all))))
+
+(defn binary ()
+  (assert (once build-succeeds?))
+  binary-path)
+
+(defn build-succeeds? ()
+  (match (run-command (->command :program (str "knave")
+                                 :args (vec (str "build"))))
+    ((ok output) (= (:code output) 0))
+    ((err _) false)))
+
+(defn run-command (command)
+  (map-ok (run-raw (as-str (:program command))
+                   (ref (:args command)))
+          (fn (raw)
+            (let-match ((pair code (pair stdout stderr)) raw)
+              (->run-output :code code :stdout stdout :stderr stderr)))))
+
+(defn scratch-root (name)
+  (let (root (str (temp-directory)
+                  "/ledelint-tests-"
+                  (process-id)
+                  "/" name))
+    (remove-directory! (as-str root))
+    root))
+
+(type remove-directory!
+  (fn ((ref str)) unit))
+
+(def remove-directory!
+  (rust "drop(std::fs::remove_dir_all({0}))"
+    (fn ((ref str)) unit)))
+
+(type write-file!
+  (fn ((ref str) (ref str)) unit))
+
+(def write-file!
+  (rust "{{ let path = std::path::Path::new({0}); if let Some(parent) = path.parent() {{ let _ = std::fs::create_dir_all(parent); }} let _ = std::fs::write(path, {1}); }}"
+    (fn ((ref str) (ref str)) unit)))
+
+(defn file-path (root name) (str root "/" name))
