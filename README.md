@@ -1,6 +1,6 @@
 # ledelint
 
-ledelint checks that each Knave file reads top-down, like a newspaper article. Readers meet broad concepts before details. It runs as a Knave task.
+ledelint is a Knave linter that enforces the newspaper metaphor. It runs as a Knave task.
 
 ## Install
 
