@@ -1,0 +1,52 @@
+(use violations rule)
+
+(export problem->line violation->line)
+
+(defn violation->line (path violation)
+  (problem->line path
+                 (:line (:subject violation))
+                 (rule->code (:rule violation))
+                 (as-str (violation->message violation))))
+
+(type problem->line
+  (fn ((ref str) int (ref str) (ref str))
+    string))
+
+(defn problem->line (path line code message)
+  (str path ":" line ": " code ": " message))
+
+(defn rule->code (rule)
+  (match rule
+    (section-order "section-order")
+    (public-first "public-first")
+    (type-stepdown "type-stepdown")
+    (constant-stepdown "constant-stepdown")
+    (function-stepdown "function-stepdown")
+    (signature-adjacent "signature-adjacent")))
+
+(defn violation->message (violation)
+  (let (subject (quoted-name (:subject violation))
+        witness (witness->text (:witness violation)))
+    (match (:rule violation)
+      (section-order (str subject " belongs above " witness
+                          ": header, then constants, then types, then functions, then tests"))
+      (public-first (str subject " belongs above " witness
+                         ": main first, then exported functions, then private ones"))
+      (signature-adjacent (str
+                            "the signature of " subject
+                            " belongs directly above its definition, not above "
+                            witness))
+      (_ (str subject " is used by " witness
+              ", so it belongs below it")))))
+
+(defn quoted-name (definition)
+  (str "`" (:name definition) "`"))
+
+(defn witness->text (witness)
+  (match witness
+    ((some definition)
+     (str (quoted-name definition)
+          " (line "
+          (:line definition)
+          ")"))
+    (none (str "the end of the file"))))

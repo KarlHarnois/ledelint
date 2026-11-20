@@ -1,0 +1,49 @@
+(use forms ->form atom-name children head-is? head-name
+           items? shape signature-of-fn? tail)
+
+(defn atom-form (name)
+  (->form :shape (shape/atom (str name)) :line 0))
+
+(defn list-form (forms)
+  (->form :shape (shape/items forms) :line 0))
+
+(deftest finds-the-head-name
+  (assert (= (head-name (list-form (vec (atom-form "defn")
+                                        (atom-form "total")
+                                        (list-form (vec))
+                                        (atom-form "1"))))
+             (some (str "defn")))))
+
+(deftest reads-an-atom-name
+  (assert (= (atom-name (atom-form "tax"))
+             (some (str "tax")))))
+
+(deftest reads-a-list-as-items
+  (let (form (list-form (vec (atom-form "a")
+                             (atom-form "b")
+                             (atom-form "c"))))
+    (assert (items? form))
+    (assert (= (len (children form)) 3))))
+
+(deftest matches-the-head
+  (assert (head-is? (list-form (vec (atom-form "defn")))
+                    "defn")))
+
+(deftest keeps-the-forms-after-the-head
+  (let (form (list-form (vec (atom-form "a")
+                             (atom-form "b")
+                             (atom-form "c"))))
+    (assert (= (len (tail (children form) 1)) 2))))
+
+(deftest recognizes-a-function-signature
+  (assert (signature-of-fn?
+            (list-form (vec (atom-form "type")
+                            (atom-form "total")
+                            (list-form (vec (atom-form "fn")
+                                            (list-form (vec (atom-form "int")))
+                                            (atom-form "int"))))))))
+
+(deftest rejects-a-value-signature
+  (assert (not (signature-of-fn? (list-form (vec (atom-form "type")
+                                                 (atom-form "total")
+                                                 (atom-form "int")))))))

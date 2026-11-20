@@ -1,0 +1,8 @@
+(export knave-files-under)
+
+(type knave-files-under
+  (fn ((ref str)) (vec string)))
+
+(def knave-files-under
+  (rust "{{ fn walk(path: &std::path::Path, found: &mut Vec<String>) {{ let skipped = path.file_name().map_or(false, |name| name == \"target\" || name == \".git\"); if path.is_dir() && !skipped {{ if let Ok(entries) = std::fs::read_dir(path) {{ for entry in entries.flatten() {{ walk(&entry.path(), found) }} }} }} else if path.extension().map_or(false, |extension| extension == \"knv\") {{ found.push(path.display().to_string()) }} }} let mut found = Vec::new(); walk(std::path::Path::new({0}), &mut found); found.sort(); found }}"
+    (fn ((ref str)) (vec string))))

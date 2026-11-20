@@ -1,0 +1,78 @@
+(use outline definition role visibility)
+(use violations ->violation collected-violations rule)
+
+(export ranking ranking-violations rankings)
+
+(def rankings (vec ranking/sections ranking/visibilities))
+
+(defenum ranking
+  sections
+  visibilities)
+
+(defn ranking-violations (definitions ranking)
+  (-> (range 0 (len definitions))
+      (map (fn (position) (outranked definitions position ranking)))
+      collect collected-violations))
+
+(defn outranked (definitions position ranking)
+  (let (subject (at definitions position))
+    (match (rank subject ranking)
+      (none none)
+      ((some subject-rank)
+       (-> (first-outranking definitions position subject-rank ranking)
+           (map-some (fn (witness)
+                       (ranking-violation subject witness ranking))))))))
+
+(type first-outranking
+  (fn ((ref (vec definition)) int int ranking)
+    (option definition)))
+
+(defn first-outranking (definitions position subject-rank ranking)
+  (-> (range 0 position)
+      (map (fn (earlier) (at definitions earlier)))
+      (find (fn (earlier)
+              (outranks? (deref earlier) subject-rank ranking)))
+      (map-some clone)))
+
+(defn outranks? (earlier subject-rank ranking)
+  (match (rank earlier ranking)
+    (none false)
+    ((some earlier-rank) (> earlier-rank subject-rank))))
+
+(defn rank (definition ranking)
+  (match ranking
+    (sections (section-rank (:role definition)))
+    (visibilities (visibility-rank (:role definition)))))
+
+(defn section-rank (role)
+  (match role
+    (header (some 0))
+    (constant (some 1))
+    ((data-type _) (some 2))
+    (type-extension (some 2))
+    ((routine _) (some 3))
+    (macro (some 3))
+    (signature (some 3))
+    (test (some 4))
+    (loose none)))
+
+(defn visibility-rank (role)
+  (match role
+    ((routine visibility) (some (visibility->rank visibility)))
+    (_ none)))
+
+(defn visibility->rank (visibility)
+  (match visibility
+    (entry 0)
+    (exported 1)
+    (private 2)))
+
+(defn ranking-violation (subject witness ranking)
+  (->violation :rule (ranking->rule ranking)
+               :subject (clone subject)
+               :witness (some witness)))
+
+(defn ranking->rule (ranking)
+  (match ranking
+    (sections rule/section-order)
+    (visibilities rule/public-first)))

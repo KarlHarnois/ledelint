@@ -1,0 +1,46 @@
+(export ->form atom-name children form head-is? head-name
+        items? shape signature-of-fn? tail)
+
+(defstruct form
+  :shape shape
+  :line int)
+
+(defenum shape
+  (atom string)
+  text
+  (items (vec form)))
+
+(defn signature-of-fn? (form)
+  (match (-> (children form) (tail 2) first)
+    (none false)
+    ((some signature) (head-is? signature "fn"))))
+
+(defn head-is? (form expected)
+  (= (head-name form)
+     (some (str expected))))
+
+(defn head-name (form)
+  (match (-> (children form) first)
+    (none none)
+    ((some head) (atom-name head))))
+
+(defn children (form)
+  (match (:shape form)
+    ((items forms) (clone forms))
+    (_ (vec))))
+
+(defn tail (forms skipped)
+  (-> (range skipped (len forms))
+      (map (fn (position)
+             (clone (at forms position))))
+      collect))
+
+(defn atom-name (form)
+  (match (:shape form)
+    ((atom name) (some (clone name)))
+    (_ none)))
+
+(defn items? (form)
+  (match (:shape form)
+    ((items _) true)
+    (_ false)))

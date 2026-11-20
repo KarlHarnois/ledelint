@@ -1,0 +1,34 @@
+(use reader text->forms)
+(use references form->references)
+
+(defn first-form (text)
+  (match (text->forms text)
+    ((ok forms) (-> (first forms) (map-some clone)))
+    ((err _) none)))
+
+(deftest struct-references-its-field-types
+  (let (form (unwrap (first-form "(defstruct order :status payment-status :items (vec line-item))")))
+    (assert (= (form->references form)
+               (vec (str "payment-status")
+                    (str "vec")
+                    (str "line-item"))))))
+
+(deftest enum-case-names-are-not-references
+  (let (form (unwrap (first-form "(defenum payment paid (refunded money))")))
+    (assert (= (form->references form)
+               (vec (str "money"))))))
+
+(deftest local-names-are-not-references
+  (let (form (unwrap (first-form "(defn total (order) (let (tax 1) (match (sum order) ((some found) (add found tax)))))")))
+    (assert (= (form->references form)
+               (vec (str "let")
+                    (str "1")
+                    (str "match")
+                    (str "sum")
+                    (str "add"))))))
+
+(deftest constructors-and-enum-cases-reference-their-type
+  (let (form (unwrap (first-form
+                       "(defn build () (->order :status payment/paid))")))
+    (assert (= (form->references form)
+               (vec (str "order") (str "payment"))))))

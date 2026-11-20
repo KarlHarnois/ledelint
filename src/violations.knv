@@ -1,0 +1,29 @@
+(use outline definition)
+
+(export ->violation collected-violations rule violation)
+
+(defstruct violation
+  :rule rule
+  :subject definition
+  :witness (option definition))
+
+(defenum rule
+  section-order
+  public-first
+  type-stepdown
+  constant-stepdown
+  function-stepdown
+  signature-adjacent)
+
+(type collected-violations
+  (fn ((vec (option violation)))
+    (vec violation)))
+
+(defn collected-violations (options)
+  (let (found (vec))
+    (for-each (iter options)
+      (fn (option)
+        (match option
+          ((some violation) (push! found (clone violation)))
+          (none (do)))))
+    found))

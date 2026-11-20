@@ -1,0 +1,20 @@
+(use outline forms->definitions)
+(use reader text->forms)
+(use report violation->line)
+(use rules definitions->violations)
+
+(def stepdown-source
+  "(defn tax (total) total)\n\n(defn order-total (order) (tax order))")
+
+(defn report-lines ()
+  (match (text->forms stepdown-source)
+    ((ok forms)
+     (-> (definitions->violations (forms->definitions forms))
+         iter
+         (map (fn (violation) (violation->line "src/shop.knv" violation)))
+         collect))
+    ((err _) (vec))))
+
+(deftest line-names-file-line-and-rule
+  (assert (= (report-lines)
+             (vec (str "src/shop.knv:1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it")))))

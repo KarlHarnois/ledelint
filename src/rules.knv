@@ -1,0 +1,32 @@
+(use ordering ranking-violations rankings)
+(use signatures signature-violations)
+(use stepdown stepdown-groups stepdown-violations)
+(use violations violation)
+
+(export definitions->violations)
+
+(defn definitions->violations (definitions)
+  (let (found (vec))
+    (for-each (iter rankings)
+      (fn (ranking)
+        (push-all! (mut found)
+                   (ranking-violations definitions (deref ranking)))))
+    (for-each (iter stepdown-groups)
+      (fn (group)
+        (push-all! (mut found)
+                   (stepdown-violations definitions (deref group)))))
+    (push-all! (mut found) (signature-violations definitions))
+    (sort-by! found violation-line)
+    found))
+
+(defn violation-line (violation)
+  (:line (:subject violation)))
+
+(type push-all!
+  (fn ((mut (vec violation)) (vec violation))
+    unit))
+
+(defn push-all! (found violations)
+  (for-each (iter violations)
+    (fn (violation)
+      (push! found (clone violation)))))

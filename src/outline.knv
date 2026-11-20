@@ -1,0 +1,126 @@
+(use forms atom-name children head-is? head-name shape
+           signature-of-fn? tail)
+
+(use references form->references)
+
+(export definition forms->definitions role visibility)
+
+(def entry-name "main")
+
+(defstruct definition
+  :name string
+  :role role
+  :line int
+  :references (vec string))
+
+(defenum role
+  header
+  constant
+  (data-type visibility)
+  type-extension
+  (routine visibility)
+  macro
+  signature
+  test
+  loose)
+
+(defenum visibility
+  entry
+  exported
+  private)
+
+(defstruct module-names
+  :exported (vec string)
+  :signed-routines (vec string))
+
+(defn forms->definitions (forms)
+  (let (names (->module-names :exported (exported-names forms)
+                              :signed-routines (signed-routine-names forms)))
+    (-> forms
+        (map (fn (form)
+               (form->definition form (ref names))))
+        collect)))
+
+(defn exported-names (forms)
+  (let (names (vec))
+    (for-each (iter forms)
+      (fn (form)
+        (when (head-is? form "export")
+          (push-atom-names! (mut names)
+                            (tail (children form) 1)))))
+    names))
+
+(defn signed-routine-names (forms)
+  (-> forms iter
+      (filter routine-signature?)
+      (map definition-name)
+      collect))
+
+(defn form->definition (form names)
+  (let (role (form->role form names))
+    (->definition :name (definition-name form)
+                  :role role
+                  :line (:line form)
+                  :references (form->references form))))
+
+(defn routine-signature? (form)
+  (and (head-is? form "type") (signature-of-fn? form)))
+
+(defn push-atom-names! (names forms)
+  (for-each (iter forms)
+    (fn (form)
+      (match (atom-name form)
+        ((some name) (push! names name))
+        (none (do))))))
+
+(defn form->role (form names)
+  (match (head-name form)
+    (none role/loose)
+    ((some head) (head->role (as-str head) form names))))
+
+(defn head->role (head form names)
+  (cond
+    ((contains? (vec "use" "export") head) role/header)
+    ((= head "def") (def->role form names))
+    ((contains? (vec "defstruct" "defenum" "deftype" "deftrait")
+                head)
+     (role/data-type (export-visibility form names)))
+    ((contains? (vec "derive" "display" "show") head)
+     role/type-extension)
+    ((= head "defn")
+     (role/routine (routine-visibility form names)))
+    ((= head "deftask") (role/routine visibility/exported))
+    ((= head "deftest") role/test)
+    ((contains? (vec "defmacro" "defrule") head) role/macro)
+    ((= head "type") role/signature)
+    (else role/loose)))
+
+(defn def->role (form names)
+  (match (-> (children form) (tail 2) first)
+    (none role/constant)
+    ((some value) (value->role value form names))))
+
+(defn routine-visibility (form names)
+  (if (= (definition-name form) entry-name)
+    visibility/entry
+    (export-visibility form names)))
+
+(defn export-visibility (form names)
+  (if (contains? (:exported names) (definition-name form))
+    visibility/exported visibility/private))
+
+(defn value->role (value form names)
+  (if (or (head-is? value "fn")
+          (contains? (:signed-routines names) (definition-name form)))
+    (role/routine (routine-visibility form names))
+    role/constant))
+
+(defn definition-name (form)
+  (match (-> (children form) (tail 1) first)
+    (none (str ""))
+    ((some name-form) (declared-name name-form))))
+
+(defn declared-name (form)
+  (match (:shape form)
+    ((atom name) (clone name))
+    (_ (-> (head-name form) (unwrap-or (str ""))))))

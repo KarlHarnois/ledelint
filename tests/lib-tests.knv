@@ -1,0 +1,5 @@
+(use lib ->settings run)
+
+(deftest project-has-no-findings
+  (assert (= (run (->settings :root (str ".")))
+             (vec))))

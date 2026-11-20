@@ -1,0 +1,4 @@
+(deftest adds-one
+  (assert (= (total 1) 1)))
+
+(defn total (n) n)

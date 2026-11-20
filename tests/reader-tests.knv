@@ -1,0 +1,23 @@
+(use reader reader-error text->forms)
+
+(deftest comments-and-strings-hide-their-parentheses
+  (assert (ok? (text->forms "(def note \"a ) in text\") ; a ( in a comment"))))
+
+(deftest forms-keep-their-line
+  (assert (= (-> (text->forms "\n\n(def tax-rate 15)")
+                 unwrap-ok
+                 (first)
+                 (map-some (fn (form) (:line form))))
+             (some 3))))
+
+(deftest open-list-is-unclosed
+  (assert (= (text->forms "(defn total (order)\n  (:total order)")
+             (err (reader-error/unclosed-list 1)))))
+
+(deftest open-string-is-unclosed
+  (assert (= (text->forms "(def note\n  \"unfinished)")
+             (err (reader-error/unclosed-string 2)))))
+
+(deftest extra-parenthesis-is-a-stray-close
+  (assert (= (text->forms "(def tax-rate 15))")
+             (err (reader-error/stray-close 1)))))

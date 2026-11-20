@@ -1,0 +1,14 @@
+(use lib ->settings print-problems run)
+
+(defn main ()
+  (let (arguments (command-line-args)
+        problems (run (->settings :root (root-argument arguments))))
+    (print-problems problems)
+    (when (not (empty? problems)) (exit 1))))
+
+(defn root-argument (arguments)
+  (-> arguments iter
+      (find (fn (argument)
+              (not (starts-with? argument "--"))))
+      (map-some clone)
+      (unwrap-or (str "."))))

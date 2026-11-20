@@ -1,0 +1,40 @@
+(use shop money)
+
+(export order-total main)
+
+(def tax-rate 15)
+
+(defstruct order
+  :payment-status payment-status
+  :line-items (vec line-item))
+
+(defenum payment-status
+  pending
+  authorized
+  paid
+  refunded
+  cancelled)
+
+(defstruct line-item
+  :id str
+  :price money)
+
+(defn main ()
+  (println (order-total (->order :payment-status payment-status/paid :line-items (vec)))))
+
+(type order-total
+  (fn ((ref order))
+    int))
+
+(defn order-total (order)
+  (let (line-items (:line-items order))
+    (-> line-items (map line-item-total) sum (with-tax))))
+
+(defn line-item-total (line-item)
+  (:cents (:price line-item)))
+
+(defn with-tax (total)
+  (+ total (/ (* total tax-rate) 100)))
+
+(deftest order-total-is-zero-without-lines
+  (assert (= (order-total (->order :payment-status payment-status/paid :line-items (vec))) 0)))

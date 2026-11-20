@@ -1,0 +1,31 @@
+(use outline forms->definitions)
+(use reader text->forms)
+(use stepdown stepdown-groups stepdown-violations)
+
+(defn violation-names (text)
+  (let (definitions (definitions-of text)
+        found (vec))
+    (for-each (iter stepdown-groups)
+      (fn (group)
+        (for-each (iter (stepdown-violations (ref definitions) (deref group)))
+          (fn (violation)
+            (push! found
+                   (clone (:name (:subject violation))))))))
+    found))
+
+(defn definitions-of (text)
+  (match (text->forms text)
+    ((ok forms) (forms->definitions forms))
+    ((err _) (vec))))
+
+(deftest reports-a-callee-above-its-caller
+  (assert (= (violation-names "(defn tax (total) total)\n\n(defn order-total (order) (tax order))")
+             (vec (str "tax")))))
+
+(deftest exempts-mutual-recursion
+  (assert (= (violation-names "(defn ping () (pong))\n\n(defn pong () (ping))")
+             (vec))))
+
+(deftest allows-a-test-to-call-a-function-above-it
+  (assert (= (violation-names "(defn total (n) n)\n\n(deftest adds-one (assert (= (total 1) 1)))")
+             (vec))))

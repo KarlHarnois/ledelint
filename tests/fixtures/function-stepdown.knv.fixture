@@ -1,0 +1,5 @@
+(defn line-item-total (line-item)
+  (:cents line-item))
+
+(defn order-total (order)
+  (-> (:line-items order) (map line-item-total) sum))
