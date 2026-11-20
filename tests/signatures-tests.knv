@@ -2,14 +2,6 @@
 (use reader text->forms)
 (use signatures signature-violations)
 
-(deftest reports-a-detached-signature
-  (assert (= (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn tax (total) total)\n\n(defn order-total (order) (:total order))")
-             (vec (str "order-total")))))
-
-(deftest accepts-a-signature-above-its-definition
-  (assert (= (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn order-total (order) (:total order))")
-             (vec))))
-
 (defn violation-names (text)
   (let (definitions (definitions-of text))
     (-> (signature-violations (ref definitions))
@@ -22,3 +14,11 @@
   (match (text->forms text)
     ((ok forms) (forms->definitions forms))
     ((err _) (vec))))
+
+(deftest reports-a-detached-signature
+  (assert (= (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn tax (total) total)\n\n(defn order-total (order) (:total order))")
+             (vec (str "order-total")))))
+
+(deftest accepts-a-signature-above-its-definition
+  (assert (= (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn order-total (order) (:total order))")
+             (vec))))

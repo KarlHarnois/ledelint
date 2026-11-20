@@ -67,6 +67,7 @@
     ((routine _) (some 3))
     (macro (some 3))
     (signature (some 3))
+    (test (some 4))
     (loose none)))
 
 (defn visibility-rank (role)

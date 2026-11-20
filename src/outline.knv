@@ -18,6 +18,7 @@
   (routine visibility)
   macro
   signature
+  test
   loose)
 
 (defenum visibility
@@ -168,7 +169,7 @@
     ((= head "defn")
      (role/routine (routine-visibility form names)))
     ((= head "deftask") (role/routine visibility/exported))
-    ((= head "deftest") (role/routine visibility/private))
+    ((= head "deftest") role/test)
     ((contains? (vec "defmacro" "defrule") head) role/macro)
     ((= head "type") role/signature)
     (else role/loose)))

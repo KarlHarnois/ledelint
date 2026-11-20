@@ -3,6 +3,26 @@
 (use rules definitions->violations)
 (use violations rule)
 
+(defn fixture (name)
+  (slurp (str "tests/fixtures/" name ".knv.fixture")))
+
+(type findings
+  (fn (string) (vec (pair rule string))))
+
+(defn findings (text)
+  (match (text->forms (as-str text))
+    ((ok forms)
+     (violations->findings (definitions->violations (forms->definitions
+                                                      forms))))
+    ((err _) (vec))))
+
+(defn violations->findings (violations)
+  (-> violations iter
+      (map (fn (violation)
+             (pair (:rule violation)
+                   (clone (:name (:subject violation))))))
+      collect))
+
 (deftest newspaper-layout-passes
   (assert (= (findings (unwrap-ok (fixture "newspaper")))
              (vec))))
@@ -35,22 +55,6 @@
   (assert (= (findings (unwrap-ok (fixture "exemptions")))
              (vec))))
 
-(defn fixture (name)
-  (slurp (str "tests/fixtures/" name ".knv.fixture")))
-
-(type findings
-  (fn (string) (vec (pair rule string))))
-
-(defn findings (text)
-  (match (text->forms (as-str text))
-    ((ok forms)
-     (violations->findings (definitions->violations (forms->definitions
-                                                      forms))))
-    ((err _) (vec))))
-
-(defn violations->findings (violations)
-  (-> violations iter
-      (map (fn (violation)
-             (pair (:rule violation)
-                   (clone (:name (:subject violation))))))
-      collect))
+(deftest test-above-a-function-breaks-section-order
+  (assert (= (findings (unwrap-ok (fixture "test-order")))
+             (vec (pair rule/section-order (str "total"))))))

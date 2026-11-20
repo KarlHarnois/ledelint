@@ -2,14 +2,6 @@
 (use outline forms->definitions)
 (use reader text->forms)
 
-(deftest reports-a-constant-below-a-type
-  (assert (= (violation-names "(defstruct order :id str)\n\n(def tax-rate 15)")
-             (vec (str "tax-rate")))))
-
-(deftest reports-main-below-an-exported-function
-  (assert (= (violation-names "(export order-total)\n\n(defn order-total (order) (:total order))\n\n(defn main () (println \"orders\"))")
-             (vec (str "main")))))
-
 (defn violation-names (text)
   (let (definitions (definitions-of text)
         found (vec))
@@ -25,3 +17,15 @@
   (match (text->forms text)
     ((ok forms) (forms->definitions forms))
     ((err _) (vec))))
+
+(deftest reports-a-constant-below-a-type
+  (assert (= (violation-names "(defstruct order :id str)\n\n(def tax-rate 15)")
+             (vec (str "tax-rate")))))
+
+(deftest reports-main-below-an-exported-function
+  (assert (= (violation-names "(export order-total)\n\n(defn order-total (order) (:total order))\n\n(defn main () (println \"orders\"))")
+             (vec (str "main")))))
+
+(deftest reports-a-function-below-a-test
+  (assert (= (violation-names "(deftest adds-one (assert (= (total 1) 1)))\n\n(defn total (n) n)")
+             (vec (str "total")))))

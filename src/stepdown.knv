@@ -9,14 +9,15 @@
 (def stepdown-groups
   (vec group/public-types group/private-types
        group/constants group/public-routines
-       group/private-routines))
+       group/private-routines group/tests))
 
 (defenum group
   public-types
   private-types
   constants
   public-routines
-  private-routines)
+  private-routines
+  tests)
 
 (type stepdown-violations
   (fn ((ref (vec definition)) group)
@@ -73,7 +74,8 @@
     (private-types (private-type? role))
     (constants (constant? role))
     (public-routines (public-routine? role))
-    (private-routines (private-routine? role))))
+    (private-routines (private-routine? role))
+    (tests (test? role))))
 
 (defn group->rule (group)
   (match group
@@ -81,7 +83,8 @@
     (private-types rule/type-stepdown)
     (constants rule/constant-stepdown)
     (public-routines rule/function-stepdown)
-    (private-routines rule/function-stepdown)))
+    (private-routines rule/function-stepdown)
+    (tests rule/function-stepdown)))
 
 (defn public-type? (role)
   (match role
@@ -106,3 +109,6 @@
   (match role
     ((routine visibility/private) true)
     (_ false)))
+
+(defn test? (role)
+  (match role (test true) (_ false)))

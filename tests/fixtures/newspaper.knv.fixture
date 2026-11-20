@@ -35,3 +35,6 @@
 
 (defn with-tax (total)
   (+ total (/ (* total tax-rate) 100)))
+
+(deftest order-total-is-zero-without-lines
+  (assert (= (order-total (->order :payment-status payment-status/paid :line-items (vec))) 0)))

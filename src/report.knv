@@ -35,9 +35,8 @@
   (let (subject (quoted-name (:subject violation))
         witness (witness->text (:witness violation)))
     (match (:rule violation)
-      (section-order (str
-                       subject " belongs above " witness
-                       ": header, then constants, then types, then functions"))
+      (section-order (str subject " belongs above " witness
+                          ": header, then constants, then types, then functions, then tests"))
       (public-first (str subject " belongs above " witness
                          ": main first, then exported functions, then private ones"))
       (signature-adjacent (str

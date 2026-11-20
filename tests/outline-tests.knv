@@ -1,6 +1,30 @@
 (use outline definition forms->definitions role visibility)
 (use reader text->forms)
 
+(type roles (fn ((ref str)) (vec role)))
+
+(defn roles (text)
+  (-> (outline text)
+      iter
+      (map (fn (definition) (:role definition)))
+      collect))
+
+(type references
+  (fn ((ref str)) (vec string)))
+
+(defn references (text)
+  (match (-> (outline text) first)
+    (none (vec))
+    ((some definition) (clone (:references definition)))))
+
+(type outline
+  (fn ((ref str)) (vec definition)))
+
+(defn outline (text)
+  (match (text->forms text)
+    ((ok forms) (forms->definitions forms))
+    ((err _) (vec))))
+
 (deftest main-is-the-entry-routine
   (assert (= (roles "(defn main () (run))")
              (vec (role/routine visibility/entry)))))
@@ -38,26 +62,6 @@
   (assert (= (references "(defn build () (->order :status payment/paid))")
              (vec (str "order") (str "payment")))))
 
-(type roles (fn ((ref str)) (vec role)))
-
-(defn roles (text)
-  (-> (outline text)
-      iter
-      (map (fn (definition) (:role definition)))
-      collect))
-
-(type references
-  (fn ((ref str)) (vec string)))
-
-(defn references (text)
-  (match (-> (outline text) first)
-    (none (vec))
-    ((some definition) (clone (:references definition)))))
-
-(type outline
-  (fn ((ref str)) (vec definition)))
-
-(defn outline (text)
-  (match (text->forms text)
-    ((ok forms) (forms->definitions forms))
-    ((err _) (vec))))
+(deftest test-forms-have-their-own-role
+  (assert (= (roles "(deftest adds-one (assert true))")
+             (vec role/test))))

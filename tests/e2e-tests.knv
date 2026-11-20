@@ -35,46 +35,6 @@
   :stdout string
   :stderr string)
 
-(deftest clean-tree-passes
-  (let (root (scratch-root "clean")
-        path (file-path root "clean.knv"))
-    (write-file! (as-str path) (as-str clean-source))
-    (let (output (unwrap-ok (run-ledelint root)))
-      (assert (= (:code output) 0))
-      (assert (= (:stdout output) ""))
-      (assert (= (:stderr output) "")))))
-
-(deftest dirty-tree-reports-on-stdout-and-exits-one
-  (let (root (scratch-root "dirty")
-        path (file-path root "report.knv"))
-    (write-file! (as-str path) (as-str dirty-source))
-    (let (output (unwrap-ok (run-ledelint root)))
-      (assert (= (:code output) 1))
-      (assert (= (:stdout output)
-                 (str path
-                      ":1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it\n")))
-      (assert (= (:stderr output) "ledelint found 1 problem(s)\n")))))
-
-(deftest unreadable-source-is-reported
-  (let (root (scratch-root "broken")
-        path (file-path root "broken.knv"))
-    (write-file! (as-str path) (as-str broken-source))
-    (let (output (unwrap-ok (run-ledelint root)))
-      (assert (= (:code output) 1))
-      (assert (= (:stdout output)
-                 (str path
-                      ":1: unreadable: the list opened on line 1 is never closed\n"))))))
-
-(deftest skips-target-and-git-directories
-  (let (root (scratch-root "skipped")
-        target (file-path (file-path root "target") "hidden.knv")
-        git (file-path (file-path root ".git") "hidden.knv"))
-    (write-file! (as-str target) (as-str dirty-source))
-    (write-file! (as-str git) (as-str dirty-source))
-    (let (output (unwrap-ok (run-ledelint root)))
-      (assert (= (:code output) 0))
-      (assert (= (:stdout output) "")))))
-
 (defn run-ledelint (root)
   (run-command (->command :program (str (binary))
                           :args (vec root))))
@@ -119,3 +79,43 @@
     (fn ((ref str) (ref str)) unit)))
 
 (defn file-path (root name) (str root "/" name))
+
+(deftest clean-tree-passes
+  (let (root (scratch-root "clean")
+        path (file-path root "clean.knv"))
+    (write-file! (as-str path) (as-str clean-source))
+    (let (output (unwrap-ok (run-ledelint root)))
+      (assert (= (:code output) 0))
+      (assert (= (:stdout output) ""))
+      (assert (= (:stderr output) "")))))
+
+(deftest dirty-tree-reports-on-stdout-and-exits-one
+  (let (root (scratch-root "dirty")
+        path (file-path root "report.knv"))
+    (write-file! (as-str path) (as-str dirty-source))
+    (let (output (unwrap-ok (run-ledelint root)))
+      (assert (= (:code output) 1))
+      (assert (= (:stdout output)
+                 (str path
+                      ":1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it\n")))
+      (assert (= (:stderr output) "ledelint found 1 problem(s)\n")))))
+
+(deftest unreadable-source-is-reported
+  (let (root (scratch-root "broken")
+        path (file-path root "broken.knv"))
+    (write-file! (as-str path) (as-str broken-source))
+    (let (output (unwrap-ok (run-ledelint root)))
+      (assert (= (:code output) 1))
+      (assert (= (:stdout output)
+                 (str path
+                      ":1: unreadable: the list opened on line 1 is never closed\n"))))))
+
+(deftest skips-target-and-git-directories
+  (let (root (scratch-root "skipped")
+        target (file-path (file-path root "target") "hidden.knv")
+        git (file-path (file-path root ".git") "hidden.knv"))
+    (write-file! (as-str target) (as-str dirty-source))
+    (write-file! (as-str git) (as-str dirty-source))
+    (let (output (unwrap-ok (run-ledelint root)))
+      (assert (= (:code output) 0))
+      (assert (= (:stdout output) "")))))
