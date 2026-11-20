@@ -1,7 +1,5 @@
 (use outline definition role visibility)
-
-(use violations ->violation collected-violations rule
-                violation)
+(use violations ->violation collected-violations rule)
 
 (export ranking ranking-violations rankings)
 
@@ -11,18 +9,10 @@
   sections
   visibilities)
 
-(type ranking-violations
-  (fn ((ref (vec definition)) ranking)
-    (vec violation)))
-
 (defn ranking-violations (definitions ranking)
   (-> (range 0 (len definitions))
       (map (fn (position) (outranked definitions position ranking)))
       collect collected-violations))
-
-(type outranked
-  (fn ((ref (vec definition)) int ranking)
-    (option violation)))
 
 (defn outranked (definitions position ranking)
   (let (subject (at definitions position))
@@ -48,10 +38,6 @@
   (match (rank earlier ranking)
     (none false)
     ((some earlier-rank) (> earlier-rank subject-rank))))
-
-(type rank
-  (fn ((ref definition) ranking)
-    (option int)))
 
 (defn rank (definition ranking)
   (match ranking

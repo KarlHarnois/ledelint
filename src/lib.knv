@@ -17,18 +17,12 @@
       (eprintln "ledelint found " (len problems) " problem(s)")
       (exit 1))))
 
-(type settings->problems
-  (fn ((ref settings)) (vec string)))
-
 (defn settings->problems (settings)
   (let (found (vec))
     (for-each (iter (knave-files-under (as-str (:root settings))))
       (fn (path)
         (push-file-problems! (mut found) (as-str path))))
     found))
-
-(type push-file-problems!
-  (fn ((mut (vec string)) (ref str)) unit))
 
 (defn push-file-problems! (found path)
   (for-each (iter (file-problems path))

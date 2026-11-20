@@ -2,11 +2,6 @@
 
 (export acyclic-callers)
 
-(type acyclic-callers
-  (fn ((ref (vec definition))
-       (ref definition))
-    (vec definition)))
-
 (defn acyclic-callers (members callee)
   (-> members iter
       (filter (fn (caller)
@@ -16,20 +11,10 @@
       (map clone)
       collect))
 
-(type calls?
-  (fn ((ref definition) (ref definition))
-    bool))
-
 (defn calls? (caller callee)
   (and (not= (:name caller) (:name callee))
        (contains? (:references caller)
                   (clone (:name callee)))))
-
-(type reaches?
-  (fn ((ref (vec definition))
-       (ref string)
-       (ref string))
-    bool))
 
 (defn reaches? (members start target)
   (search members
@@ -37,25 +22,10 @@
           (vec)
           target))
 
-(type search
-  (fn ((ref (vec definition))
-       (vec string)
-       (vec string)
-       (ref string))
-    bool))
-
 (defn search (members frontier visited target)
   (match (pop! frontier)
     (none false)
     ((some name) (visit members frontier visited target name))))
-
-(type visit
-  (fn ((ref (vec definition))
-       (vec string)
-       (vec string)
-       (ref string)
-       string)
-    bool))
 
 (defn visit (members frontier visited target name)
   (cond

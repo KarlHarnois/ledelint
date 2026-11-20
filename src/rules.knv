@@ -1,14 +1,9 @@
 (use ordering ranking-violations rankings)
-(use outline definition)
 (use signatures signature-violations)
 (use stepdown stepdown-groups stepdown-violations)
 (use violations violation)
 
 (export definitions->violations)
-
-(type definitions->violations
-  (fn ((ref (vec definition)))
-    (vec violation)))
 
 (defn definitions->violations (definitions)
   (let (found (vec))
@@ -23,9 +18,6 @@
     (push-all! (mut found) (signature-violations definitions))
     (sort-by! found violation-line)
     found))
-
-(type violation-line
-  (fn ((ref violation)) int))
 
 (defn violation-line (violation)
   (:line (:subject violation)))

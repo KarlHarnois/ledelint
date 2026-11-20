@@ -1,1 +1,3 @@
-(defproject ledelint :knave "0.21.0")
+(defproject ledelint
+  :knave "0.21.0"
+  (lints (needless-type deny)))

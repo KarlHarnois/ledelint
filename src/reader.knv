@@ -50,10 +50,6 @@
   :line int
   :forms (vec form))
 
-(type text->forms
-  (fn ((ref str))
-    (result (vec form) reader-error)))
-
 (defn text->forms (text)
   (let-try (tokens (text->tokens text))
     (tokens->forms tokens)))
@@ -77,10 +73,6 @@
   (collect-tokens (-> text chars collect)
                   (->cursor :position 0 :line 1)
                   (vec)))
-
-(type collect-tokens
-  (fn ((ref (vec char)) cursor (vec token))
-    (result (vec token) reader-error)))
 
 (defn collect-tokens (characters start tokens)
   (match (get characters (:position start))
@@ -202,18 +194,10 @@
                 (line-break? (deref (at characters position)))))
       count))
 
-(type tokens->forms
-  (fn ((ref (vec token)))
-    (result (vec form) reader-error)))
-
 (defn tokens->forms (tokens)
   (assemble tokens 0
             (->assembly :current (->frame :line 0 :forms (vec))
                         :parents (vec))))
-
-(type assemble
-  (fn ((ref (vec token)) int assembly)
-    (result (vec form) reader-error)))
 
 (defn assemble (tokens position progress)
   (match (get tokens position)

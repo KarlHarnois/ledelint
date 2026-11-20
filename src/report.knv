@@ -1,10 +1,6 @@
-(use outline definition)
-(use violations rule violation)
+(use violations rule)
 
 (export problem->line violation->line)
-
-(type violation->line
-  (fn ((ref str) (ref violation)) string))
 
 (defn violation->line (path violation)
   (problem->line path
@@ -28,9 +24,6 @@
     (function-stepdown "function-stepdown")
     (signature-adjacent "signature-adjacent")))
 
-(type violation->message
-  (fn ((ref violation)) string))
-
 (defn violation->message (violation)
   (let (subject (quoted-name (:subject violation))
         witness (witness->text (:witness violation)))
@@ -46,14 +39,8 @@
       (_ (str subject " is used by " witness
               ", so it belongs below it")))))
 
-(type quoted-name
-  (fn ((ref definition)) string))
-
 (defn quoted-name (definition)
   (str "`" (:name definition) "`"))
-
-(type witness->text
-  (fn ((ref (option definition))) string))
 
 (defn witness->text (witness)
   (match witness

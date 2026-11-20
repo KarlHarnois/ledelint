@@ -19,10 +19,6 @@
   private-routines
   tests)
 
-(type stepdown-violations
-  (fn ((ref (vec definition)) group)
-    (vec violation)))
-
 (defn stepdown-violations (definitions group)
   (let (members (group-members definitions group))
     (-> members iter
@@ -30,22 +26,12 @@
                (callee-above-callers (ref members) member group)))
         collect collected-violations)))
 
-(type group-members
-  (fn ((ref (vec definition)) group)
-    (vec definition)))
-
 (defn group-members (definitions group)
   (-> definitions iter
       (filter (fn (definition)
                 (member? group (:role definition))))
       (map clone)
       collect))
-
-(type callee-above-callers
-  (fn ((ref (vec definition))
-       (ref definition)
-       group)
-    (option violation)))
 
 (defn callee-above-callers (members callee group)
   (let (callers (acyclic-callers members callee))

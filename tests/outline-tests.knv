@@ -1,7 +1,5 @@
-(use outline definition forms->definitions role visibility)
+(use outline forms->definitions role visibility)
 (use reader text->forms)
-
-(type roles (fn ((ref str)) (vec role)))
 
 (defn roles (text)
   (-> (outline text)
@@ -9,16 +7,10 @@
       (map (fn (definition) (:role definition)))
       collect))
 
-(type references
-  (fn ((ref str)) (vec string)))
-
 (defn references (text)
   (match (-> (outline text) first)
     (none (vec))
     ((some definition) (clone (:references definition)))))
-
-(type outline
-  (fn ((ref str)) (vec definition)))
 
 (defn outline (text)
   (match (text->forms text)

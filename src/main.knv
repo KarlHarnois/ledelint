@@ -4,9 +4,6 @@
   (let (arguments (command-line-args))
     (run (->settings :root (root-argument arguments)))))
 
-(type root-argument
-  (fn ((ref (vec string))) string))
-
 (defn root-argument (arguments)
   (-> arguments iter
       (find (fn (argument)

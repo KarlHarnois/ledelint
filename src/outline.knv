@@ -1,4 +1,4 @@
-(use reader form shape)
+(use reader shape)
 
 (export definition forms->definitions role visibility)
 
@@ -30,9 +30,6 @@
   :exported (vec string)
   :signed-routines (vec string))
 
-(type forms->definitions
-  (fn ((ref (vec form))) (vec definition)))
-
 (defn forms->definitions (forms)
   (let (names (->module-names :exported (exported-names forms)
                               :signed-routines (signed-routine-names forms)))
@@ -40,9 +37,6 @@
         (map (fn (form)
                (form->definition form (ref names))))
         collect)))
-
-(type exported-names
-  (fn ((ref (vec form))) (vec string)))
 
 (defn exported-names (forms)
   (let (names (vec))
@@ -52,9 +46,6 @@
           (push-atom-names! (mut names)
                             (tail (children form) 1)))))
     names))
-
-(type signed-routine-names
-  (fn ((ref (vec form))) (vec string)))
 
 (defn signed-routine-names (forms)
   (-> forms iter
@@ -76,19 +67,12 @@
   (= (head-name form)
      (some (str expected))))
 
-(type push-atom-names!
-  (fn ((mut (vec string)) (ref (vec form)))
-    unit))
-
 (defn push-atom-names! (names forms)
   (for-each (iter forms)
     (fn (form)
       (match (atom-name form)
         ((some name) (push! names name))
         (none (do))))))
-
-(type tail
-  (fn ((ref (vec form)) int) (vec form)))
 
 (defn tail (forms skipped)
   (-> (range skipped (len forms))
@@ -101,17 +85,10 @@
     (none false)
     ((some signature) (head-is? signature "fn"))))
 
-(type children
-  (fn ((ref form)) (vec form)))
-
 (defn children (form)
   (match (:shape form)
     ((items forms) (clone forms))
     (_ (vec))))
-
-(type form->role
-  (fn ((ref form) (ref module-names))
-    role))
 
 (defn form->role (form names)
   (match (head-name form)
@@ -135,27 +112,15 @@
         (map clone)
         collect)))
 
-(type atom-name
-  (fn ((ref form)) (option string)))
-
 (defn atom-name (form)
   (match (:shape form)
     ((atom name) (some (clone name)))
     (_ none)))
 
-(type head-name
-  (fn ((ref form)) (option string)))
-
 (defn head-name (form)
   (match (-> (children form) first)
     (none none)
     ((some head) (atom-name head))))
-
-(type head->role
-  (fn ((ref str)
-       (ref form)
-       (ref module-names))
-    role))
 
 (defn head->role (head form names)
   (cond
@@ -179,25 +144,15 @@
     ((atom name) (clone name))
     (_ (-> (head-name form) (unwrap-or (str ""))))))
 
-(type bound-names
-  (fn ((ref form)) (vec string)))
-
 (defn bound-names (form)
   (let (found (vec))
     (push-bound-names! (mut found) form)
     found))
 
-(type referencing-forms
-  (fn ((ref form)) (vec form)))
-
 (defn referencing-forms (form)
   (if (head-is? form "defenum")
     (enum-case-types form)
     (tail (children form) 2)))
-
-(type push-atoms!
-  (fn ((mut (vec string)) (ref form))
-    unit))
 
 (defn push-atoms! (found form)
   (match (:shape form)
@@ -221,10 +176,6 @@
   (if (contains? (:exported names) (definition-name form))
     visibility/exported visibility/private))
 
-(type push-bound-names!
-  (fn ((mut (vec string)) (ref form))
-    unit))
-
 (defn push-bound-names! (found form)
   (let (forms (children form))
     (match (head-name form)
@@ -233,9 +184,6 @@
     (for-each (iter forms)
       (fn (child) (push-bound-names! found child)))))
 
-(type enum-case-types
-  (fn ((ref form)) (vec form)))
-
 (defn enum-case-types (form)
   (let (found (vec))
     (for-each (iter (tail (children form) 2))
@@ -243,32 +191,16 @@
         (push-case-types! (mut found) enum-case)))
     found))
 
-(type push-reference!
-  (fn ((mut (vec string)) (ref string))
-    unit))
-
 (defn push-reference! (found name)
   (match (atom->reference name)
     ((some reference) (push! found reference))
     (none (do))))
-
-(type value->role
-  (fn ((ref form)
-       (ref form)
-       (ref module-names))
-    role))
 
 (defn value->role (value form names)
   (if (or (head-is? value "fn")
           (contains? (:signed-routines names) (definition-name form)))
     (role/routine (routine-visibility form names))
     role/constant))
-
-(type push-binder-names!
-  (fn ((mut (vec string))
-       (ref str)
-       (ref (vec form)))
-    unit))
 
 (defn push-binder-names! (found head forms)
   (cond
@@ -278,9 +210,6 @@
      (push-parameter-list! found forms))
     ((= head "match") (push-pattern-names! found forms))
     (else (do))))
-
-(type push-case-types!
-  (fn ((mut (vec form)) (ref form)) unit))
 
 (defn push-case-types! (found enum-case)
   (for-each (iter (tail (children enum-case) 1))
@@ -297,19 +226,11 @@
      (some (str (subs name 2 (len name)))))
     (else (some (before-slash name)))))
 
-(type push-binding-list!
-  (fn ((mut (vec string)) (ref (vec form)))
-    unit))
-
 (defn push-binding-list! (found forms)
   (match (get forms 1)
     (none (do))
     ((some bindings)
      (push-binding-patterns! found (children bindings)))))
-
-(type push-parameter-list!
-  (fn ((mut (vec string)) (ref (vec form)))
-    unit))
 
 (defn push-parameter-list! (found forms)
   (let (parameters (-> forms iter
@@ -317,10 +238,6 @@
     (match parameters
       (none (do))
       ((some list) (push-all-atoms! found list)))))
-
-(type push-pattern-names!
-  (fn ((mut (vec string)) (ref (vec form)))
-    unit))
 
 (defn push-pattern-names! (found forms)
   (for-each (iter (tail forms 2))
@@ -334,10 +251,6 @@
     (none (clone name))
     ((some part) (str part))))
 
-(type push-binding-patterns!
-  (fn ((mut (vec string)) (ref (vec form)))
-    unit))
-
 (defn push-binding-patterns! (found bindings)
   (for-each (-> bindings iter enumerate)
     (fn (entry)
@@ -348,10 +261,6 @@
   (match (:shape form)
     ((items _) true)
     (_ false)))
-
-(type push-all-atoms!
-  (fn ((mut (vec string)) (ref form))
-    unit))
 
 (defn push-all-atoms! (found form)
   (match (:shape form)

@@ -1,22 +1,12 @@
 (use outline definition role)
-
-(use violations ->violation collected-violations rule
-                violation)
+(use violations ->violation collected-violations rule)
 
 (export signature-violations)
-
-(type signature-violations
-  (fn ((ref (vec definition)))
-    (vec violation)))
 
 (defn signature-violations (definitions)
   (-> (range 0 (len definitions))
       (map (fn (position) (detached-signature definitions position)))
       collect collected-violations))
-
-(type detached-signature
-  (fn ((ref (vec definition)) int)
-    (option violation)))
 
 (defn detached-signature (definitions position)
   (let (subject (at definitions position)
