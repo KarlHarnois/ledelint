@@ -1,19 +1,19 @@
 # ledelint
 
-ledelint checks that each Knave file reads top-down, like a newspaper article. A reader meets the broad concepts first and the details further down. ledelint is written in Knave and runs as a Knave task.
+ledelint checks that each Knave file reads top-down, like a newspaper article. Readers meet broad concepts before details. It runs as a Knave task.
 
 ## Install
 
-ledelint is built with Knave 0.21.0. ledelint has no release yet, so pin a commit.
+ledelint is built with Knave 0.21.0 and has no release yet, so pin a commit.
 
-1. Add ledelint to the `libraries` of your `project.knv`:
+1. Add it to `libraries` in `project.knv`:
 
    ```knave
    (defproject shop :knave "0.21.0"
      (libraries (ledelint :git "https://github.com/KarlHarnois/ledelint" :rev "<commit>")))
    ```
 
-2. Create `tasks/newspaper.knv` with this task:
+2. Create `tasks/newspaper.knv`:
 
    ```knave
    (use ledelint run)
@@ -22,6 +22,6 @@ ledelint is built with Knave 0.21.0. ledelint has no release yet, so pin a commi
      (run (as-str path)))
    ```
 
-   Never name the file `tasks/ledelint.knv`: Knave reserves the module path `ledelint` for the library.
+   Never name it `tasks/ledelint.knv`: Knave reserves that module path for the library.
 
 3. Run `knave task ledelint`.
