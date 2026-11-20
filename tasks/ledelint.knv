@@ -1,5 +1,5 @@
 (use lib run)
 
-(deftask ledelint (:path string "." :github false)
+(deftask ledelint (:path string ".")
   "Checks that each Knave file reads top-down, like a newspaper."
-  (run (as-str path) github))
+  (run (as-str path)))

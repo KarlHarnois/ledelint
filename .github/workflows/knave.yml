@@ -38,7 +38,7 @@ jobs:
       - name: Lint
         run: knave lint
       - name: Check the newspaper order
-        run: knave task ledelint --github
+        run: knave task ledelint
       - name: Build
         run: knave build
       - name: Test

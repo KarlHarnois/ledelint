@@ -39,7 +39,7 @@
   (let (root (scratch-root "clean")
         path (file-path root "clean.knv"))
     (write-file! (as-str path) (as-str clean-source))
-    (let (output (unwrap-ok (run-ledelint root (vec))))
+    (let (output (unwrap-ok (run-ledelint root)))
       (assert (= (:code output) 0))
       (assert (= (:stdout output) ""))
       (assert (= (:stderr output) "")))))
@@ -48,28 +48,18 @@
   (let (root (scratch-root "dirty")
         path (file-path root "report.knv"))
     (write-file! (as-str path) (as-str dirty-source))
-    (let (output (unwrap-ok (run-ledelint root (vec))))
+    (let (output (unwrap-ok (run-ledelint root)))
       (assert (= (:code output) 1))
       (assert (= (:stdout output)
                  (str path
                       ":1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it\n")))
       (assert (= (:stderr output) "ledelint found 1 problem(s)\n")))))
 
-(deftest github-flag-prints-a-workflow-annotation
-  (let (root (scratch-root "github")
-        path (file-path root "report.knv"))
-    (write-file! (as-str path) (as-str dirty-source))
-    (let (output (unwrap-ok (run-ledelint root (vec (str "--github")))))
-      (assert (= (:code output) 1))
-      (assert (= (:stdout output)
-                 (str "::error file=" path
-                      ",line=1,title=ledelint function-stepdown::`tax` is used by `order-total` (line 3), so it belongs below it\n"))))))
-
 (deftest unreadable-source-is-reported
   (let (root (scratch-root "broken")
         path (file-path root "broken.knv"))
     (write-file! (as-str path) (as-str broken-source))
-    (let (output (unwrap-ok (run-ledelint root (vec))))
+    (let (output (unwrap-ok (run-ledelint root)))
       (assert (= (:code output) 1))
       (assert (= (:stdout output)
                  (str path
@@ -81,15 +71,13 @@
         git (file-path (file-path root ".git") "hidden.knv"))
     (write-file! (as-str target) (as-str dirty-source))
     (write-file! (as-str git) (as-str dirty-source))
-    (let (output (unwrap-ok (run-ledelint root (vec))))
+    (let (output (unwrap-ok (run-ledelint root)))
       (assert (= (:code output) 0))
       (assert (= (:stdout output) "")))))
 
-(defn run-ledelint (root args)
-  (let (all (vec root))
-    (for-each (iter args)
-      (fn (arg) (push! all (clone arg))))
-    (run-command (->command :program (str (binary)) :args all))))
+(defn run-ledelint (root)
+  (run-command (->command :program (str (binary))
+                          :args (vec root))))
 
 (defn binary ()
   (assert (once build-succeeds?))

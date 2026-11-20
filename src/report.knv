@@ -1,34 +1,23 @@
 (use outline definition)
 (use rules rule violation)
 
-(export problem->line report-format violation->line)
-
-(defenum report-format
-  plain
-  github)
+(export problem->line violation->line)
 
 (type violation->line
-  (fn (report-format (ref str) (ref violation))
-    string))
+  (fn ((ref str) (ref violation)) string))
 
-(defn violation->line (format path violation)
-  (problem->line format path
+(defn violation->line (path violation)
+  (problem->line path
                  (:line (:subject violation))
                  (rule->code (:rule violation))
                  (as-str (violation->message violation))))
 
 (type problem->line
-  (fn (report-format (ref str)
-                     int
-                     (ref str)
-                     (ref str))
+  (fn ((ref str) int (ref str) (ref str))
     string))
 
-(defn problem->line (format path line code message)
-  (match format
-    (plain (str path ":" line ": " code ": " message))
-    (github (str "::error file=" path ",line=" line
-                 ",title=ledelint " code "::" message))))
+(defn problem->line (path line code message)
+  (str path ":" line ": " code ": " message))
 
 (defn rule->code (rule)
   (match rule

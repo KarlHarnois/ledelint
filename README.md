@@ -73,8 +73,8 @@ ledelint is built with Knave 0.21.0. ledelint has no release yet, so pin a commi
    ```knave
    (use ledelint run)
 
-   (deftask ledelint (:path string "." :github false)
-     (run (as-str path) github))
+   (deftask ledelint (:path string ".")
+     (run (as-str path)))
    ```
 
    Never name the file `tasks/ledelint.knv`: Knave reserves the module path `ledelint` for the library.
@@ -95,7 +95,7 @@ Add this step to your workflow, after the step that installs Knave:
 
 ```yaml
 - name: Check the newspaper order
-  run: knave task ledelint --github
+  run: knave task ledelint
 ```
 
-With `--github`, ledelint prints each problem as an `::error` workflow command, so GitHub annotates the line in the pull request. Exit code 1 fails the job.
+ledelint prints each problem to the job log. Exit code 1 fails the job.
