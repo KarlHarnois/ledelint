@@ -1,8 +1,10 @@
-(use lib ->settings run)
+(use lib ->settings print-problems run)
 
 (defn main ()
-  (let (arguments (command-line-args))
-    (run (->settings :root (root-argument arguments)))))
+  (let (arguments (command-line-args)
+        problems (run (->settings :root (root-argument arguments))))
+    (print-problems problems)
+    (when (not (empty? problems)) (exit 1))))
 
 (defn root-argument (arguments)
   (-> arguments iter

@@ -5,18 +5,18 @@
 (use report problem->line violation->line)
 (use rules definitions->violations)
 
-(export ->settings run settings)
+(export ->settings print-problems run settings)
 
 (defstruct settings
   :root string)
 
-(defn run (settings)
-  (let (problems (settings->problems settings))
-    (for-each (iter problems)
-      (fn (problem) (println problem)))
-    (when (not (empty? problems))
-      (eprintln "ledelint found " (len problems) " problem(s)")
-      (exit 1))))
+(defn run (settings) (settings->problems settings))
+
+(defn print-problems (problems)
+  (for-each (iter problems)
+    (fn (problem) (println problem)))
+  (when (not (empty? problems))
+    (eprintln "ledelint found " (len problems) " problem(s)")))
 
 (defn settings->problems (settings)
   (let (found (vec))

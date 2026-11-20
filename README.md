@@ -16,10 +16,13 @@ ledelint is built with Knave 0.21.0 and has no release yet, so pin a commit.
 2. Create `tasks/newspaper.knv`:
 
    ```knave
-   (use ledelint ->settings run)
+   (use ledelint ->settings print-problems run)
 
    (deftask ledelint (:path string ".")
-     (run (->settings :root (str path))))
+     (let (problems (run (->settings :root (str path))))
+       (print-problems problems)
+       (when (not (empty? problems))
+         (exit 1))))
    ```
 
    Never name it `tasks/ledelint.knv`: Knave reserves that module path for the library.

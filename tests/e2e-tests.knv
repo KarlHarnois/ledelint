@@ -10,6 +10,14 @@
 
 (def broken-source (str "(defn total (order)\n"))
 
+(def consumer-task
+  (str "(use ledelint ->settings print-problems run)\n" "\n"
+       "(deftask ledelint (:path string \".\")\n"
+       "  (let (problems (run (->settings :root (str path))))\n"
+       "    (print-problems problems)\n"
+       "    (when (not (empty? problems))\n"
+       "      (exit 1))))\n"))
+
 (def process-id
   (rust "std::process::id()" (fn () u32)))
 
@@ -17,9 +25,18 @@
   (rust "std::env::temp_dir().display().to_string()"
     (fn () string)))
 
+(def current-directory
+  (rust "std::env::current_dir().map(|path| path.display().to_string()).unwrap_or_default()"
+    (fn () string)))
+
 (def run-raw
   (rust "std::process::Command::new({0}).args({1}).output().map(|output| (output.status.code().unwrap_or(-1), (String::from_utf8_lossy(&output.stdout).to_string(), String::from_utf8_lossy(&output.stderr).to_string()))).map_err(|failure| failure.to_string())"
     (fn ((ref str) (ref (vec string)))
+      (result (pair i32 (pair string string)) string))))
+
+(def run-raw-in
+  (rust "std::process::Command::new({0}).args({1}).current_dir({2}).output().map(|output| (output.status.code().unwrap_or(-1), (String::from_utf8_lossy(&output.stdout).to_string(), String::from_utf8_lossy(&output.stderr).to_string()))).map_err(|failure| failure.to_string())"
+    (fn ((ref str) (ref (vec string)) (ref str))
       (result (pair i32 (pair string string)) string))))
 
 (def once
@@ -34,6 +51,26 @@
   :code i32
   :stdout string
   :stderr string)
+
+(defn consumer-project (name)
+  (let (root (scratch-root name)
+        project (file-path root "project.knv")
+        project-file (consumer-project-file)
+        main (file-path root "src/main.knv")
+        main-source (str "(defn main () (do))\n")
+        task (file-path root "tasks/newspaper.knv")
+        bad (file-path root "bad/shop.knv"))
+    (write-file! (as-str project) (as-str project-file))
+    (write-file! (as-str main) (as-str main-source))
+    (write-file! (as-str task) (as-str consumer-task))
+    (write-file! (as-str bad) (as-str dirty-source))
+    root))
+
+(defn consumer-project-file ()
+  (str "(defproject consumer :knave \"0.21.0\"\n"
+       "  (libraries (ledelint :path \""
+       (current-directory)
+       "\")))\n"))
 
 (defn run-ledelint (root)
   (run-command (->command :program (str (binary))
@@ -52,9 +89,17 @@
 (defn run-command (command)
   (map-ok (run-raw (as-str (:program command))
                    (ref (:args command)))
-          (fn (raw)
-            (let-match ((pair code (pair stdout stderr)) raw)
-              (->run-output :code code :stdout stdout :stderr stderr)))))
+          output-of-raw))
+
+(defn run-command-in (directory command)
+  (map-ok (run-raw-in (as-str (:program command))
+                      (ref (:args command))
+                      (as-str directory))
+          output-of-raw))
+
+(defn output-of-raw (raw)
+  (let-match ((pair code (pair stdout stderr)) raw)
+    (->run-output :code code :stdout stdout :stderr stderr)))
 
 (defn scratch-root (name)
   (let (root (str (temp-directory)
@@ -119,3 +164,16 @@
     (let (output (unwrap-ok (run-ledelint root)))
       (assert (= (:code output) 0))
       (assert (= (:stdout output) "")))))
+
+(deftest consumer-task-reports-and-exits
+  (let (root (consumer-project "consumer")
+        output (unwrap-ok (run-command-in root
+                                          (->command :program (str "knave")
+                                                     :args (vec (str "task")
+                                                                (str "ledelint")
+                                                                (str "--path")
+                                                                (str "bad"))))))
+    (assert (= (:code output) 1))
+    (assert (= (:stdout output)
+               (str "bad/shop.knv:1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it\n")))
+    (assert (contains? (:stderr output) "ledelint found 1 problem(s)"))))
