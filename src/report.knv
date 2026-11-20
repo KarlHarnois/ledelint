@@ -1,0 +1,77 @@
+(use outline definition)
+(use rules rule violation)
+
+(export problem->line report-format violation->line)
+
+(defenum report-format
+  plain
+  github)
+
+(type violation->line
+  (fn (report-format (ref str) (ref violation))
+    string))
+
+(defn violation->line (format path violation)
+  (problem->line format path
+                 (:line (:subject violation))
+                 (rule->code (:rule violation))
+                 (as-str (violation->message violation))))
+
+(type problem->line
+  (fn (report-format (ref str)
+                     int
+                     (ref str)
+                     (ref str))
+    string))
+
+(defn problem->line (format path line code message)
+  (match format
+    (plain (str path ":" line ": " code ": " message))
+    (github (str "::error file=" path ",line=" line
+                 ",title=ledelint " code "::" message))))
+
+(defn rule->code (rule)
+  (match rule
+    (section-order "section-order")
+    (public-first "public-first")
+    (type-stepdown "type-stepdown")
+    (constant-stepdown "constant-stepdown")
+    (function-stepdown "function-stepdown")
+    (signature-adjacent "signature-adjacent")))
+
+(type violation->message
+  (fn ((ref violation)) string))
+
+(defn violation->message (violation)
+  (let (subject (quoted-name (:subject violation))
+        witness (witness->text (:witness violation)))
+    (match (:rule violation)
+      (section-order (str
+                       subject " belongs above " witness
+                       ": header, then constants, then types, then functions"))
+      (public-first (str subject " belongs above " witness
+                         ": main first, then exported functions, then private ones"))
+      (signature-adjacent (str
+                            "the signature of " subject
+                            " belongs directly above its definition, not above "
+                            witness))
+      (_ (str subject " is used by " witness
+              ", so it belongs below it")))))
+
+(type quoted-name
+  (fn ((ref definition)) string))
+
+(defn quoted-name (definition)
+  (str "`" (:name definition) "`"))
+
+(type witness->text
+  (fn ((ref (option definition))) string))
+
+(defn witness->text (witness)
+  (match witness
+    ((some definition)
+     (str (quoted-name definition)
+          " (line "
+          (:line definition)
+          ")"))
+    (none (str "the end of the file"))))

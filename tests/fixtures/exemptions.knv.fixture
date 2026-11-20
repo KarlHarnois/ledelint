@@ -1,0 +1,23 @@
+(export even-step main)
+
+(defn main ()
+  (helper 1))
+
+(defn even-step (n)
+  (if (= n 0) true (odd-step (- n 1))))
+
+(defn helper (n)
+  (let (main-result (even-step n)
+        odd-step 2)
+    (match main-result
+      (true odd-step)
+      (false n))))
+
+(defn odd-step (n)
+  (if (= n 0) false (even-step (- n 1))))
+
+(defn ping (n)
+  (pong n))
+
+(defn pong (n)
+  (ping n))

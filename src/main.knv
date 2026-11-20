@@ -1,0 +1,16 @@
+(use lib run)
+
+(defn main ()
+  (let (arguments (command-line-args))
+    (run (root-argument arguments)
+         (contains? arguments (str "--github")))))
+
+(type root-argument
+  (fn ((ref (vec string))) string))
+
+(defn root-argument (arguments)
+  (-> arguments iter
+      (find (fn (argument)
+              (not (starts-with? argument "--"))))
+      (map-some clone)
+      (unwrap-or (str "."))))

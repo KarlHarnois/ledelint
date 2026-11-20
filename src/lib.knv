@@ -1,0 +1,81 @@
+(use files knave-files-under)
+(use outline forms->definitions)
+(use reader error->message error-line form text->forms)
+(use report problem->line report-format violation->line)
+(use rules definitions->violations)
+
+(export run)
+
+(defstruct settings
+  :root string
+  :format report-format)
+
+(defn run (root github-flag)
+  (let (settings (->settings :root (str root)
+                             :format (flag->format github-flag))
+        problems (settings->problems settings))
+    (for-each (iter problems)
+      (fn (problem) (println problem)))
+    (when (not (empty? problems))
+      (eprintln "ledelint found " (len problems) " problem(s)")
+      (exit 1))))
+
+(defn flag->format (github-flag)
+  (if github-flag report-format/github report-format/plain))
+
+(type settings->problems
+  (fn ((ref settings)) (vec string)))
+
+(defn settings->problems (settings)
+  (let (found (vec))
+    (for-each (iter (knave-files-under (as-str (:root settings))))
+      (fn (path)
+        (push-file-problems! (mut found)
+                             (:format settings)
+                             (as-str path))))
+    found))
+
+(type push-file-problems!
+  (fn ((mut (vec string))
+       report-format
+       (ref str))
+    unit))
+
+(defn push-file-problems! (found format path)
+  (for-each (iter (file-problems format path))
+    (fn (problem)
+      (push! found (clone problem)))))
+
+(type file-problems
+  (fn (report-format (ref str))
+    (vec string)))
+
+(defn file-problems (format path)
+  (match (slurp path)
+    ((ok text) (source->problems format path (as-str text)))
+    ((err cause)
+     (vec (problem->line format path 1 "unreadable"
+                         (as-str (str cause)))))))
+
+(type source->problems
+  (fn (report-format (ref str) (ref str))
+    (vec string)))
+
+(defn source->problems (format path text)
+  (match (text->forms text)
+    ((ok forms) (forms->problems format path forms))
+    ((err failure)
+     (vec (problem->line format path
+                         (error-line failure)
+                         "unreadable"
+                         (as-str (error->message failure)))))))
+
+(type forms->problems
+  (fn (report-format (ref str) (vec form))
+    (vec string)))
+
+(defn forms->problems (format path forms)
+  (-> (forms->definitions forms)
+      definitions->violations iter
+      (map (fn (violation) (violation->line format path violation)))
+      collect))

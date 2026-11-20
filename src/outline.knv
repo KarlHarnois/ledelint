@@ -1,0 +1,361 @@
+(use reader form shape)
+
+(export definition forms->definitions role visibility)
+
+(def entry-name "main")
+
+(defstruct definition
+  :name string
+  :role role
+  :line int
+  :references (vec string))
+
+(defenum role
+  header
+  constant
+  (data-type visibility)
+  type-extension
+  (routine visibility)
+  macro
+  signature
+  loose)
+
+(defenum visibility
+  entry
+  exported
+  private)
+
+(defstruct module-names
+  :exported (vec string)
+  :signed-routines (vec string))
+
+(type forms->definitions
+  (fn ((ref (vec form))) (vec definition)))
+
+(defn forms->definitions (forms)
+  (let (names (->module-names :exported (exported-names forms)
+                              :signed-routines (signed-routine-names forms)))
+    (-> forms
+        (map (fn (form)
+               (form->definition form (ref names))))
+        collect)))
+
+(type exported-names
+  (fn ((ref (vec form))) (vec string)))
+
+(defn exported-names (forms)
+  (let (names (vec))
+    (for-each (iter forms)
+      (fn (form)
+        (when (head-is? form "export")
+          (push-atom-names! (mut names)
+                            (tail (children form) 1)))))
+    names))
+
+(type signed-routine-names
+  (fn ((ref (vec form))) (vec string)))
+
+(defn signed-routine-names (forms)
+  (-> forms iter
+      (filter routine-signature?)
+      (map definition-name)
+      collect))
+
+(defn form->definition (form names)
+  (let (role (form->role form names))
+    (->definition :name (definition-name form)
+                  :role role
+                  :line (:line form)
+                  :references (references form))))
+
+(defn routine-signature? (form)
+  (and (head-is? form "type") (signature-of-fn? form)))
+
+(defn head-is? (form expected)
+  (= (head-name form)
+     (some (str expected))))
+
+(type push-atom-names!
+  (fn ((mut (vec string)) (ref (vec form)))
+    unit))
+
+(defn push-atom-names! (names forms)
+  (for-each (iter forms)
+    (fn (form)
+      (match (atom-name form)
+        ((some name) (push! names name))
+        (none (do))))))
+
+(type tail
+  (fn ((ref (vec form)) int) (vec form)))
+
+(defn tail (forms skipped)
+  (-> (range skipped (len forms))
+      (map (fn (position)
+             (clone (at forms position))))
+      collect))
+
+(defn signature-of-fn? (form)
+  (match (-> (children form) (tail 2) first)
+    (none false)
+    ((some signature) (head-is? signature "fn"))))
+
+(type children
+  (fn ((ref form)) (vec form)))
+
+(defn children (form)
+  (match (:shape form)
+    ((items forms) (clone forms))
+    (_ (vec))))
+
+(type form->role
+  (fn ((ref form) (ref module-names))
+    role))
+
+(defn form->role (form names)
+  (match (head-name form)
+    (none role/loose)
+    ((some head) (head->role (as-str head) form names))))
+
+(defn definition-name (form)
+  (match (-> (children form) (tail 1) first)
+    (none (str ""))
+    ((some name-form) (declared-name name-form))))
+
+(defn references (form)
+  (let (bound (bound-names form)
+        found (vec))
+    (for-each (iter (referencing-forms form))
+      (fn (child)
+        (push-atoms! (mut found) child)))
+    (-> found iter
+        (filter (fn (name)
+                  (not (contains? bound (clone (deref name))))))
+        (map clone)
+        collect)))
+
+(type atom-name
+  (fn ((ref form)) (option string)))
+
+(defn atom-name (form)
+  (match (:shape form)
+    ((atom name) (some (clone name)))
+    (_ none)))
+
+(type head-name
+  (fn ((ref form)) (option string)))
+
+(defn head-name (form)
+  (match (-> (children form) first)
+    (none none)
+    ((some head) (atom-name head))))
+
+(type head->role
+  (fn ((ref str)
+       (ref form)
+       (ref module-names))
+    role))
+
+(defn head->role (head form names)
+  (cond
+    ((contains? (vec "use" "export") head) role/header)
+    ((= head "def") (def->role form names))
+    ((contains? (vec "defstruct" "defenum" "deftype" "deftrait")
+                head)
+     (role/data-type (export-visibility form names)))
+    ((contains? (vec "derive" "display" "show") head)
+     role/type-extension)
+    ((= head "defn")
+     (role/routine (routine-visibility form names)))
+    ((= head "deftask") (role/routine visibility/exported))
+    ((= head "deftest") (role/routine visibility/private))
+    ((contains? (vec "defmacro" "defrule") head) role/macro)
+    ((= head "type") role/signature)
+    (else role/loose)))
+
+(defn declared-name (form)
+  (match (:shape form)
+    ((atom name) (clone name))
+    (_ (-> (head-name form) (unwrap-or (str ""))))))
+
+(type bound-names
+  (fn ((ref form)) (vec string)))
+
+(defn bound-names (form)
+  (let (found (vec))
+    (push-bound-names! (mut found) form)
+    found))
+
+(type referencing-forms
+  (fn ((ref form)) (vec form)))
+
+(defn referencing-forms (form)
+  (if (head-is? form "defenum")
+    (enum-case-types form)
+    (tail (children form) 2)))
+
+(type push-atoms!
+  (fn ((mut (vec string)) (ref form))
+    unit))
+
+(defn push-atoms! (found form)
+  (match (:shape form)
+    ((atom name) (push-reference! found name))
+    ((items forms)
+     (for-each (iter forms)
+       (fn (child) (push-atoms! found child))))
+    (text (do))))
+
+(defn def->role (form names)
+  (match (-> (children form) (tail 2) first)
+    (none role/constant)
+    ((some value) (value->role value form names))))
+
+(defn routine-visibility (form names)
+  (if (= (definition-name form) entry-name)
+    visibility/entry
+    (export-visibility form names)))
+
+(defn export-visibility (form names)
+  (if (contains? (:exported names) (definition-name form))
+    visibility/exported visibility/private))
+
+(type push-bound-names!
+  (fn ((mut (vec string)) (ref form))
+    unit))
+
+(defn push-bound-names! (found form)
+  (let (forms (children form))
+    (match (head-name form)
+      (none (do))
+      ((some head) (push-binder-names! found (as-str head) forms)))
+    (for-each (iter forms)
+      (fn (child) (push-bound-names! found child)))))
+
+(type enum-case-types
+  (fn ((ref form)) (vec form)))
+
+(defn enum-case-types (form)
+  (let (found (vec))
+    (for-each (iter (tail (children form) 2))
+      (fn (enum-case)
+        (push-case-types! (mut found) enum-case)))
+    found))
+
+(type push-reference!
+  (fn ((mut (vec string)) (ref string))
+    unit))
+
+(defn push-reference! (found name)
+  (match (atom->reference name)
+    ((some reference) (push! found reference))
+    (none (do))))
+
+(type value->role
+  (fn ((ref form)
+       (ref form)
+       (ref module-names))
+    role))
+
+(defn value->role (value form names)
+  (if (or (head-is? value "fn")
+          (contains? (:signed-routines names) (definition-name form)))
+    (role/routine (routine-visibility form names))
+    role/constant))
+
+(type push-binder-names!
+  (fn ((mut (vec string))
+       (ref str)
+       (ref (vec form)))
+    unit))
+
+(defn push-binder-names! (found head forms)
+  (cond
+    ((contains? (vec "let" "let-try" "let-match" "loop") head)
+     (push-binding-list! found forms))
+    ((contains? (vec "defn" "fn") head)
+     (push-parameter-list! found forms))
+    ((= head "match") (push-pattern-names! found forms))
+    (else (do))))
+
+(type push-case-types!
+  (fn ((mut (vec form)) (ref form)) unit))
+
+(defn push-case-types! (found enum-case)
+  (for-each (iter (tail (children enum-case) 1))
+    (fn (case-type)
+      (push! found (clone case-type)))))
+
+(type atom->reference
+  (fn ((ref string)) (option string)))
+
+(defn atom->reference (name)
+  (cond
+    ((starts-with? name ":") none)
+    ((starts-with? name "->")
+     (some (str (subs name 2 (len name)))))
+    (else (some (before-slash name)))))
+
+(type push-binding-list!
+  (fn ((mut (vec string)) (ref (vec form)))
+    unit))
+
+(defn push-binding-list! (found forms)
+  (match (get forms 1)
+    (none (do))
+    ((some bindings)
+     (push-binding-patterns! found (children bindings)))))
+
+(type push-parameter-list!
+  (fn ((mut (vec string)) (ref (vec form)))
+    unit))
+
+(defn push-parameter-list! (found forms)
+  (let (parameters (-> forms iter
+                       (find (fn (form) (items? form)))))
+    (match parameters
+      (none (do))
+      ((some list) (push-all-atoms! found list)))))
+
+(type push-pattern-names!
+  (fn ((mut (vec string)) (ref (vec form)))
+    unit))
+
+(defn push-pattern-names! (found forms)
+  (for-each (iter (tail forms 2))
+    (fn (arm)
+      (match (-> (children arm) first)
+        (none (do))
+        ((some pattern) (push-all-atoms! found pattern))))))
+
+(defn before-slash (name)
+  (match (-> (as-str name) (split "/") collect first)
+    (none (clone name))
+    ((some part) (str part))))
+
+(type push-binding-patterns!
+  (fn ((mut (vec string)) (ref (vec form)))
+    unit))
+
+(defn push-binding-patterns! (found bindings)
+  (for-each (-> bindings iter enumerate)
+    (fn (entry)
+      (when (even? (first entry))
+        (push-all-atoms! found (second entry))))))
+
+(defn items? (form)
+  (match (:shape form)
+    ((items _) true)
+    (_ false)))
+
+(type push-all-atoms!
+  (fn ((mut (vec string)) (ref form))
+    unit))
+
+(defn push-all-atoms! (found form)
+  (match (:shape form)
+    ((atom name) (push! found (clone name)))
+    ((items forms)
+     (for-each (iter forms)
+       (fn (child) (push-all-atoms! found child))))
+    (text (do))))

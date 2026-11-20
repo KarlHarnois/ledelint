@@ -1,0 +1,9 @@
+(type order-total
+  (fn ((ref order))
+    int))
+
+(defn tax (total)
+  total)
+
+(defn order-total (order)
+  (:total order))

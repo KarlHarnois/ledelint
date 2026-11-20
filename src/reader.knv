@@ -1,0 +1,272 @@
+(export error->message error-line form reader-error shape
+        text->forms)
+
+(defstruct form
+  :shape shape
+  :line int)
+
+(defenum shape
+  (atom string)
+  text
+  (items (vec form)))
+
+(defenum reader-error
+  (unclosed-list int)
+  (unclosed-string int)
+  (stray-close int))
+
+(defstruct lexeme
+  :token (option token)
+  :next cursor)
+
+(defstruct token
+  :kind token-kind
+  :line int)
+
+(defenum token-kind
+  open
+  close
+  (atom string)
+  text)
+
+(defstruct cursor
+  :position int
+  :line int)
+
+(defenum character-class
+  opening
+  closing
+  quotation
+  semicolon
+  line-break
+  blank
+  word)
+
+(defstruct assembly
+  :current frame
+  :parents (vec frame))
+
+(defstruct frame
+  :line int
+  :forms (vec form))
+
+(type text->forms
+  (fn ((ref str))
+    (result (vec form) reader-error)))
+
+(defn text->forms (text)
+  (let-try (tokens (text->tokens text))
+    (tokens->forms tokens)))
+
+(defn error->message (failure)
+  (match failure
+    ((unclosed-list line)
+     (str "the list opened on line " line " is never closed"))
+    ((unclosed-string line)
+     (str "the string opened on line " line " is never closed"))
+    ((stray-close line)
+     (str "line " line " closes a list that was never opened"))))
+
+(defn error-line (failure)
+  (match failure
+    ((unclosed-list line) line)
+    ((unclosed-string line) line)
+    ((stray-close line) line)))
+
+(defn text->tokens (text)
+  (collect-tokens (-> text chars collect)
+                  (->cursor :position 0 :line 1)
+                  (vec)))
+
+(type collect-tokens
+  (fn ((ref (vec char)) cursor (vec token))
+    (result (vec token) reader-error)))
+
+(defn collect-tokens (characters start tokens)
+  (match (get characters (:position start))
+    (none (ok tokens))
+    ((some character)
+     (let-try (found (read-lexeme characters start (deref character)))
+       (let-match ((lexeme :token token :next next) found)
+         (recur characters next (with-token tokens token)))))))
+
+(defn read-lexeme (characters start character)
+  (match (classify character)
+    (opening (ok (single-token token-kind/open start)))
+    (closing (ok (single-token token-kind/close start)))
+    (quotation (read-text characters start))
+    (semicolon (ok (skip-comment characters start)))
+    (line-break (ok (->lexeme :token none :next (next-line start))))
+    (blank (ok (->lexeme :token none :next (advance start 1))))
+    (word (ok (read-atom characters start)))))
+
+(defn with-token (tokens token)
+  (match token
+    ((some found) (push! tokens found) tokens)
+    (none tokens)))
+
+(defn classify (character)
+  (cond
+    ((= character (char "(")) character-class/opening)
+    ((= character (char ")")) character-class/closing)
+    ((= character (char "\"")) character-class/quotation)
+    ((= character (char ";")) character-class/semicolon)
+    ((= character (char "\n")) character-class/line-break)
+    ((whitespace? character) character-class/blank)
+    (else character-class/word)))
+
+(type single-token
+  (fn (token-kind (ref cursor)) lexeme))
+
+(defn single-token (kind start)
+  (->lexeme :token (some (->token :kind kind :line (:line start)))
+            :next (advance start 1)))
+
+(defn read-text (characters start)
+  (-> (find-closing-quote characters (inc (:position start)))
+      (map-some (fn (end) (text-lexeme characters start end)))
+      (ok-or (reader-error/unclosed-string (:line start)))))
+
+(defn skip-comment (characters start)
+  (->lexeme :token none
+            :next (->cursor :position (word-end characters start line-break?)
+                            :line (:line start))))
+
+(defn next-line (start)
+  (->cursor :position (inc (:position start))
+            :line (inc (:line start))))
+
+(defn advance (start width)
+  (->cursor :position (+ (:position start) width)
+            :line (:line start)))
+
+(defn read-atom (characters start)
+  (let (end (word-end characters start delimiter?))
+    (->lexeme :token (some (->token :kind (token-kind/atom (characters->string
+                                                             characters
+                                                             (:position start)
+                                                             end))
+                                    :line (:line start)))
+              :next (->cursor :position end :line (:line start)))))
+
+(defn find-closing-quote (characters position)
+  (match (get characters position)
+    (none none)
+    ((some character)
+     (quote-search-step characters position (deref character)))))
+
+(type text-lexeme
+  (fn ((ref (vec char)) (ref cursor) int)
+    lexeme))
+
+(defn text-lexeme (characters start end)
+  (->lexeme :token (some (->token :kind token-kind/text :line (:line start)))
+            :next (->cursor :position (inc end)
+                            :line (+ (:line start)
+                                     (count-line-breaks characters
+                                                        (:position start)
+                                                        end)))))
+
+(defn word-end (characters start stop?)
+  (loop (position (:position start))
+    (cond
+      ((>= position (len characters)) position)
+      ((stop? (deref (at characters position))) position)
+      (else (recur (inc position))))))
+
+(defn line-break? (character)
+  (= character (char "\n")))
+
+(defn delimiter? (character)
+  (match (classify character)
+    (word false)
+    (_ true)))
+
+(defn characters->string (characters start end)
+  (-> (range start end)
+      (map (fn (position)
+             (str (deref (at characters position)))))
+      collect
+      (join "")))
+
+(defn quote-search-step (characters position character)
+  (cond
+    ((= character (char "\"")) (some position))
+    ((= character (char "\\"))
+     (find-closing-quote characters (+ position 2)))
+    (else (find-closing-quote characters (inc position)))))
+
+(defn count-line-breaks (characters start end)
+  (-> (range start end)
+      (filter (fn (position)
+                (line-break? (deref (at characters position)))))
+      count))
+
+(type tokens->forms
+  (fn ((ref (vec token)))
+    (result (vec form) reader-error)))
+
+(defn tokens->forms (tokens)
+  (assemble tokens 0
+            (->assembly :current (->frame :line 0 :forms (vec))
+                        :parents (vec))))
+
+(type assemble
+  (fn ((ref (vec token)) int assembly)
+    (result (vec form) reader-error)))
+
+(defn assemble (tokens position progress)
+  (match (get tokens position)
+    (none (finish progress))
+    ((some token)
+     (let-try (placed (place progress token))
+       (recur tokens (inc position) placed)))))
+
+(defn finish (progress)
+  (let-match ((assembly :current (frame :line line :forms forms)
+                        :parents parents) progress)
+    (if (empty? parents)
+      (ok forms)
+      (err (reader-error/unclosed-list line)))))
+
+(type place
+  (fn (assembly (ref token))
+    (result assembly reader-error)))
+
+(defn place (progress token)
+  (let (line (:line token))
+    (match (:kind token)
+      (open (ok (open-frame progress line)))
+      (close (close-frame progress line))
+      ((atom name)
+       (ok (add-form progress
+                     (->form :shape (shape/atom (clone name)) :line line))))
+      (text (ok (add-form progress (->form :shape shape/text :line line)))))))
+
+(defn open-frame (progress line)
+  (let-match ((assembly :current current :parents parents) progress)
+    (push! parents current)
+    (->assembly :current (->frame :line line :forms (vec))
+                :parents parents)))
+
+(defn close-frame (progress line)
+  (let-match ((assembly :current current :parents parents) progress)
+    (match (pop! parents)
+      (none (err (reader-error/stray-close line)))
+      ((some parent)
+       (ok (->assembly :current (with-form parent (frame->form current))
+                       :parents parents))))))
+
+(defn add-form (progress form)
+  (let-match ((assembly :current current :parents parents) progress)
+    (->assembly :current (with-form current form)
+                :parents parents)))
+
+(defn with-form (frame form)
+  (let-match ((frame :line line :forms forms) frame)
+    (push! forms form)
+    (->frame :line line :forms forms)))
+
+(defn frame->form (frame)
+  (let-match ((frame :line line :forms forms) frame)
+    (->form :shape (shape/items forms) :line line)))

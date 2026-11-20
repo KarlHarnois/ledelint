@@ -1,0 +1,5 @@
+(defstruct line-item
+  :id str)
+
+(defstruct order
+  :line-items (vec line-item))

@@ -1,0 +1,63 @@
+(use outline definition forms->definitions role visibility)
+(use reader text->forms)
+
+(deftest main-is-the-entry-routine
+  (assert (= (roles "(defn main () (run))")
+             (vec (role/routine visibility/entry)))))
+
+(deftest export-makes-a-routine-public
+  (assert (= (roles "(export total)\n(defn total (order) order)")
+             (vec role/header (role/routine visibility/exported)))))
+
+(deftest def-of-a-value-is-a-constant
+  (assert (= (roles "(def tax-rate 15)") (vec role/constant))))
+
+(deftest def-with-a-function-signature-is-a-routine
+  (assert (= (roles "(type walk (fn (int) int))\n(def walk (rust \"{0}\" (fn (int) int)))")
+             (vec role/signature (role/routine visibility/private)))))
+
+(deftest struct-references-its-field-types
+  (assert (= (references "(defstruct order :status payment-status :items (vec line-item))")
+             (vec (str "payment-status")
+                  (str "vec")
+                  (str "line-item")))))
+
+(deftest enum-case-names-are-not-references
+  (assert (= (references "(defenum payment paid (refunded money))")
+             (vec (str "money")))))
+
+(deftest local-names-are-not-references
+  (assert (= (references "(defn total (order) (let (tax 1) (match (sum order) ((some found) (add found tax)))))")
+             (vec (str "let")
+                  (str "1")
+                  (str "match")
+                  (str "sum")
+                  (str "add")))))
+
+(deftest constructors-and-enum-cases-reference-their-type
+  (assert (= (references "(defn build () (->order :status payment/paid))")
+             (vec (str "order") (str "payment")))))
+
+(type roles (fn ((ref str)) (vec role)))
+
+(defn roles (text)
+  (-> (outline text)
+      iter
+      (map (fn (definition) (:role definition)))
+      collect))
+
+(type references
+  (fn ((ref str)) (vec string)))
+
+(defn references (text)
+  (match (-> (outline text) first)
+    (none (vec))
+    ((some definition) (clone (:references definition)))))
+
+(type outline
+  (fn ((ref str)) (vec definition)))
+
+(defn outline (text)
+  (match (text->forms text)
+    ((ok forms) (forms->definitions forms))
+    ((err _) (vec))))

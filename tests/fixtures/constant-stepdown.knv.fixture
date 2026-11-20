@@ -1,0 +1,3 @@
+(def base-url "https://shop.example")
+
+(def orders-url (str base-url "/orders"))

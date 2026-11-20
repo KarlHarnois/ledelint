@@ -1,0 +1,25 @@
+(use outline forms->definitions)
+(use reader text->forms)
+(use report report-format violation->line)
+(use rules definitions->violations)
+
+(def stepdown-source
+  "(defn tax (total) total)\n\n(defn order-total (order) (tax order))")
+
+(deftest plain-line-names-file-line-and-rule
+  (assert (= (report-lines report-format/plain)
+             (vec (str "src/shop.knv:1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it")))))
+
+(deftest github-line-is-an-error-annotation
+  (assert (= (report-lines report-format/github)
+             (vec (str "::error file=src/shop.knv,line=1,title=ledelint function-stepdown::`tax` is used by `order-total` (line 3), so it belongs below it")))))
+
+(defn report-lines (format)
+  (match (text->forms stepdown-source)
+    ((ok forms)
+     (-> (definitions->violations (forms->definitions forms))
+         iter
+         (map (fn (violation)
+                (violation->line format "src/shop.knv" violation)))
+         collect))
+    ((err _) (vec))))

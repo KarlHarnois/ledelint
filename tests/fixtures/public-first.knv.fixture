@@ -1,0 +1,7 @@
+(export order-total)
+
+(defn order-total (order)
+  (:total order))
+
+(defn main ()
+  (println "orders"))
