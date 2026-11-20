@@ -1,5 +1,4 @@
-(use forms children head-is? head-name items? tail)
-(use reader shape)
+(use forms children head-is? head-name items? shape tail)
 
 (export form->references)
 

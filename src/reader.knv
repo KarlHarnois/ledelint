@@ -1,14 +1,6 @@
-(export error->message error-line form reader-error shape
-        text->forms)
+(use forms ->form form shape)
 
-(defstruct form
-  :shape shape
-  :line int)
-
-(defenum shape
-  (atom string)
-  text
-  (items (vec form)))
+(export error->message error-line reader-error text->forms)
 
 (defenum reader-error
   (unclosed-list int)

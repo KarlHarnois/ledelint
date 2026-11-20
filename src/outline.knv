@@ -1,7 +1,6 @@
-(use forms atom-name children head-is? head-name
+(use forms atom-name children head-is? head-name shape
            signature-of-fn? tail)
 
-(use reader shape)
 (use references form->references)
 
 (export definition forms->definitions role visibility)

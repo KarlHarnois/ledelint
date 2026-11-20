@@ -1,6 +1,7 @@
 (use files knave-files-under)
+(use forms form)
 (use outline forms->definitions)
-(use reader error->message error-line form text->forms)
+(use reader error->message error-line text->forms)
 (use report problem->line violation->line)
 (use rules definitions->violations)
 

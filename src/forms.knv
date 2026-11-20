@@ -1,7 +1,14 @@
-(use reader shape)
+(export ->form atom-name children form head-is? head-name
+        items? shape signature-of-fn? tail)
 
-(export atom-name children head-is? head-name items?
-        signature-of-fn? tail)
+(defstruct form
+  :shape shape
+  :line int)
+
+(defenum shape
+  (atom string)
+  text
+  (items (vec form)))
 
 (defn signature-of-fn? (form)
   (match (-> (children form) (tail 2) first)
