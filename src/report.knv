@@ -23,18 +23,19 @@
 
 (defn describe-violation (violation)
   (let (subject (quoted-name (:subject violation))
-        witness (witness->text (:witness violation)))
+        witness (witness->text (:witness violation))
+        section-order-detail ": header, then constants, then types, then functions, then tests"
+        public-first-detail ": main first, then exported functions, then private ones")
     (match (:rule violation)
       (section-order (->rendering :code (str "section-order")
                                   :message (str subject
                                                 " belongs above "
                                                 witness
-                                                ": header, then constants, then types, then functions, then tests")))
-      (public-first (->rendering :code (str "public-first")
-                                 :message (str subject
-                                               " belongs above "
-                                               witness
-                                               ": main first, then exported functions, then private ones")))
+                                                section-order-detail)))
+      (public-first
+        (->rendering
+          :code (str "public-first")
+          :message (str subject " belongs above " witness public-first-detail)))
       (signature-adjacent (->rendering :code (str "signature-adjacent")
                                        :message (str "the signature of "
                                                      subject
