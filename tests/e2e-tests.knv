@@ -1,3 +1,5 @@
+(use arguments argument-error error->message usage)
+
 (def binary-path "target/knave/ledelint/ledelint")
 
 (def clean-source
@@ -75,6 +77,9 @@
 (defn run-ledelint (root)
   (run-command (->command :program (str (binary))
                           :args (vec root))))
+
+(defn run-ledelint-args (args)
+  (run-command (->command :program (str (binary)) :args args)))
 
 (defn binary ()
   (assert (once build-succeeds?))
@@ -164,6 +169,20 @@
     (let (output (unwrap-ok (run-ledelint root)))
       (assert (= (:code output) 0))
       (assert (= (:stdout output) "")))))
+
+(deftest help-prints-usage-and-exits-zero
+  (let (output (unwrap-ok (run-ledelint-args (vec (str "--help")))))
+    (assert (= (:code output) 0))
+    (assert (= (:stdout output) (str usage "\n")))
+    (assert (= (:stderr output) ""))))
+
+(deftest unknown-option-fails-with-usage
+  (let (output (unwrap-ok (run-ledelint-args (vec (str "--verbose")))))
+    (assert (= (:code output) 1))
+    (assert (= (:stdout output) ""))
+    (assert (= (:stderr output)
+               (str (error->message (argument-error/unknown-option (str "--verbose")))
+                    "\n" usage "\n")))))
 
 (deftest consumer-task-reports-and-exits
   (let (root (consumer-project "consumer")

@@ -2,7 +2,8 @@
 
 (deftest finds-the-source-files-in-sorted-order
   (assert (= (knave-files-under "src")
-             (vec (str "src/calls.knv")
+             (vec (str "src/arguments.knv")
+                  (str "src/calls.knv")
                   (str "src/files.knv")
                   (str "src/forms.knv")
                   (str "src/lib.knv")

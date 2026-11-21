@@ -28,3 +28,15 @@ ledelint is built with Knave 0.21.0 and has no release yet, so pin a commit.
    Never name it `tasks/ledelint.knv`: Knave reserves that module path for the library.
 
 3. Run `knave task ledelint`.
+
+## Usage
+
+Run the binary directly:
+
+    ledelint [OPTIONS] [PATH]
+
+`PATH` is the directory to lint, and it defaults to `.`. Pass `--help` or `-h` to print the usage.
+
+Run the same check from a Knave project with the task:
+
+    knave task ledelint --path <path>
