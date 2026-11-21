@@ -1,24 +1,15 @@
-(use outline forms->definitions)
-(use reader text->forms)
 (use signatures signature-violations)
+(use support definitions-of subject-names)
 
 (defn violation-names (text)
-  (let (definitions (definitions-of text))
-    (-> (signature-violations (ref definitions))
-        iter
-        (map (fn (violation)
-               (clone (:name (:subject violation)))))
-        collect)))
-
-(defn definitions-of (text)
-  (match (text->forms text)
-    ((ok forms) (forms->definitions forms))
-    ((err _) (vec))))
+  (map-ok (definitions-of text)
+    (fn (definitions)
+      (subject-names (signature-violations (ref definitions))))))
 
 (deftest reports-a-detached-signature
-  (assert (= (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn tax (total) total)\n\n(defn order-total (order) (:total order))")
+  (assert (= (unwrap-ok (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn tax (total) total)\n\n(defn order-total (order) (:total order))"))
              (vec (str "order-total")))))
 
 (deftest accepts-a-signature-above-its-definition
-  (assert (= (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn order-total (order) (:total order))")
+  (assert (= (unwrap-ok (violation-names "(type order-total\n  (fn ((ref order)) int))\n\n(defn order-total (order) (:total order))"))
              (vec))))

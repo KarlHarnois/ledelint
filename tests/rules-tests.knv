@@ -1,20 +1,14 @@
-(use outline forms->definitions)
-(use reader text->forms)
 (use rules definitions->violations)
+(use support definitions-of)
 (use violations rule)
 
 (defn fixture (name)
   (slurp (str "tests/fixtures/" name ".knv.fixture")))
 
-(type findings
-  (fn (string) (vec (pair rule string))))
-
 (defn findings (text)
-  (match (text->forms (as-str text))
-    ((ok forms)
-     (violations->findings (definitions->violations (forms->definitions
-                                                      forms))))
-    ((err _) (vec))))
+  (map-ok (definitions-of (as-str text))
+    (fn (definitions)
+      (violations->findings (definitions->violations definitions)))))
 
 (defn violations->findings (violations)
   (-> violations iter
@@ -24,37 +18,37 @@
       collect))
 
 (deftest newspaper-layout-passes
-  (assert (= (findings (unwrap-ok (fixture "newspaper")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "newspaper"))))
              (vec))))
 
 (deftest constant-below-type-breaks-section-order
-  (assert (= (findings (unwrap-ok (fixture "section-order")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "section-order"))))
              (vec (pair rule/section-order (str "tax-rate"))))))
 
 (deftest main-below-exported-function-breaks-public-first
-  (assert (= (findings (unwrap-ok (fixture "public-first")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "public-first"))))
              (vec (pair rule/public-first (str "main"))))))
 
 (deftest used-type-above-its-user-breaks-type-stepdown
-  (assert (= (findings (unwrap-ok (fixture "type-stepdown")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "type-stepdown"))))
              (vec (pair rule/type-stepdown (str "line-item"))))))
 
 (deftest used-constant-above-its-user-breaks-constant-stepdown
-  (assert (= (findings (unwrap-ok (fixture "constant-stepdown")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "constant-stepdown"))))
              (vec (pair rule/constant-stepdown (str "base-url"))))))
 
 (deftest callee-above-caller-breaks-function-stepdown
-  (assert (= (findings (unwrap-ok (fixture "function-stepdown")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "function-stepdown"))))
              (vec (pair rule/function-stepdown (str "line-item-total"))))))
 
 (deftest signature-away-from-its-defn-breaks-signature-adjacent
-  (assert (= (findings (unwrap-ok (fixture "signature-adjacent")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "signature-adjacent"))))
              (vec (pair rule/signature-adjacent (str "order-total"))))))
 
 (deftest recursion-shadowing-and-cross-group-calls-pass
-  (assert (= (findings (unwrap-ok (fixture "exemptions")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "exemptions"))))
              (vec))))
 
 (deftest test-above-a-function-breaks-section-order
-  (assert (= (findings (unwrap-ok (fixture "test-order")))
+  (assert (= (unwrap-ok (findings (unwrap-ok (fixture "test-order"))))
              (vec (pair rule/section-order (str "total"))))))

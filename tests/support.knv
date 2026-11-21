@@ -1,0 +1,13 @@
+(use outline forms->definitions)
+(use reader text->forms)
+
+(export definitions-of subject-names)
+
+(defn definitions-of (text)
+  (map-ok (text->forms text) forms->definitions))
+
+(defn subject-names (violations)
+  (-> violations iter
+      (map (fn (violation)
+             (clone (:name (:subject violation)))))
+      collect))
