@@ -31,11 +31,21 @@ ledelint is built with Knave 0.21.0 and has no release yet, so pin a commit.
 
 ## Usage
 
-Run the binary directly:
+`ledelint --help` prints:
 
-    ledelint [OPTIONS] [PATH]
+```text
+Checks that each Knave file reads top-down, like a newspaper.
 
-`PATH` is the directory to lint, and it defaults to `.`. Pass `--help` or `-h` to print the usage.
+Usage: ledelint [OPTIONS] [PATH]
+
+Arguments:
+  [PATH]  The directory to lint [default: .]
+
+Options:
+  -h, --help  Print this help
+```
+
+`PATH` is the directory to lint, and it defaults to `.`.
 
 Run the same check from a Knave project with the task:
 
