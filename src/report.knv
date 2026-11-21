@@ -26,17 +26,19 @@
         section-order-detail ": header, then constants, then types, then functions, then tests"
         public-first-detail ": main first, then exported functions, then private ones")
     (match (:rule violation)
-      (section-order
-        (render (str "section-order")
-                (str subject " belongs above " witness section-order-detail)))
-      (public-first
-        (render (str "public-first")
-                (str subject " belongs above " witness public-first-detail)))
-      (signature-adjacent (render (str "signature-adjacent")
-                                  (str "the signature of "
-                                       subject
-                                       " belongs directly above its definition, not above "
-                                       witness)))
+      (section-order (make-diagnostic
+                       (str "section-order")
+                       (str subject " belongs above "
+                            witness section-order-detail)))
+      (public-first (make-diagnostic
+                      (str "public-first")
+                      (str subject " belongs above " witness
+                           public-first-detail)))
+      (signature-adjacent (make-diagnostic (str "signature-adjacent")
+                                           (str "the signature of "
+                                                subject
+                                                " belongs directly above its definition, not above "
+                                                witness)))
       (type-stepdown (stepdown-description subject witness
                                            (str "type-stepdown")))
       (constant-stepdown (stepdown-description subject
@@ -47,11 +49,11 @@
                                                (str "function-stepdown"))))))
 
 (defn stepdown-description (subject witness code)
-  (render code
-          (str subject " is used by " witness
-               ", so it belongs below it")))
+  (make-diagnostic code
+                   (str subject " is used by " witness
+                        ", so it belongs below it")))
 
-(defn render (code message)
+(defn make-diagnostic (code message)
   (->diagnostic :code code :message message))
 
 (defn quoted-name (definition)
