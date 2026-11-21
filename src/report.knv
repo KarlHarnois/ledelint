@@ -7,8 +7,7 @@
   :message string)
 
 (defn violation->line (path violation)
-  (let-match ((rendering :code code :message message) (describe-violation
-                                                        violation))
+  (let-match ((rendering code message) (describe-violation violation))
     (problem->line path
                    (violation-line violation)
                    (as-str code)
@@ -27,20 +26,17 @@
         section-order-detail ": header, then constants, then types, then functions, then tests"
         public-first-detail ": main first, then exported functions, then private ones")
     (match (:rule violation)
-      (section-order (->rendering :code (str "section-order")
-                                  :message (str subject
-                                                " belongs above "
-                                                witness
-                                                section-order-detail)))
+      (section-order
+        (render (str "section-order")
+                (str subject " belongs above " witness section-order-detail)))
       (public-first
-        (->rendering
-          :code (str "public-first")
-          :message (str subject " belongs above " witness public-first-detail)))
-      (signature-adjacent (->rendering :code (str "signature-adjacent")
-                                       :message (str "the signature of "
-                                                     subject
-                                                     " belongs directly above its definition, not above "
-                                                     witness)))
+        (render (str "public-first")
+                (str subject " belongs above " witness public-first-detail)))
+      (signature-adjacent (render (str "signature-adjacent")
+                                  (str "the signature of "
+                                       subject
+                                       " belongs directly above its definition, not above "
+                                       witness)))
       (type-stepdown (stepdown-description subject witness
                                            (str "type-stepdown")))
       (constant-stepdown (stepdown-description subject
@@ -51,9 +47,12 @@
                                                (str "function-stepdown"))))))
 
 (defn stepdown-description (subject witness code)
-  (->rendering :code code
-               :message (str subject " is used by " witness
-                             ", so it belongs below it")))
+  (render code
+          (str subject " is used by " witness
+               ", so it belongs below it")))
+
+(defn render (code message)
+  (->rendering :code code :message message))
 
 (defn quoted-name (definition)
   (str "`" (:name definition) "`"))
