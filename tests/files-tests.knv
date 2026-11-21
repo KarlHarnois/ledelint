@@ -1,22 +1,16 @@
 (use files knave-files-under)
 
-(deftest finds-the-source-files-in-sorted-order
-  (assert (= (knave-files-under "src")
-             (vec (str "src/arguments.knv")
-                  (str "src/calls.knv")
-                  (str "src/files.knv")
-                  (str "src/forms.knv")
-                  (str "src/lib.knv")
-                  (str "src/main.knv")
-                  (str "src/ordering.knv")
-                  (str "src/outline.knv")
-                  (str "src/reader.knv")
-                  (str "src/references.knv")
-                  (str "src/report.knv")
-                  (str "src/rules.knv")
-                  (str "src/signatures.knv")
-                  (str "src/stepdown.knv")
-                  (str "src/violations.knv")))))
+(def fixture-root "tests/fixtures/files")
+
+(deftest finds-the-knv-files-in-sorted-order
+  (assert (= (knave-files-under fixture-root)
+             (vec (str fixture-root "/alpha.knv")
+                  (str fixture-root "/beta.knv")
+                  (str fixture-root "/nested/gamma.knv")))))
+
+(deftest finds-the-project-sources
+  (assert (contains? (knave-files-under "src") (str "src/lib.knv"))))
 
 (deftest ignores-files-that-are-not-knv
-  (assert (= (knave-files-under "tests/fixtures") (vec))))
+  (assert (= (knave-files-under (as-str (str fixture-root "/not-knv")))
+             (vec))))
