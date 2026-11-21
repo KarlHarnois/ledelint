@@ -42,3 +42,12 @@ Arguments:
 Options:
   -h, --help  Print this help
 ```
+
+## Development
+
+```sh
+knave fmt --check
+knave lint
+knave task ledelint
+knave test
+```

@@ -7,6 +7,15 @@
 
 (def entry-name "main")
 
+(def header-heads (vec "use" "export"))
+
+(def data-type-heads
+  (vec "defstruct" "defenum" "deftype" "deftrait"))
+
+(def type-extension-heads (vec "derive" "display" "show"))
+
+(def macro-heads (vec "defmacro" "defrule"))
+
 (defstruct definition
   :name string
   :role role
@@ -80,18 +89,16 @@
 
 (defn head->role (head form names)
   (cond
-    ((contains? (vec "use" "export") head) role/header)
+    ((contains? header-heads head) role/header)
     ((= head "def") (def->role form names))
-    ((contains? (vec "defstruct" "defenum" "deftype" "deftrait")
-                head)
+    ((contains? data-type-heads head)
      (role/data-type (export-visibility form names)))
-    ((contains? (vec "derive" "display" "show") head)
-     role/type-extension)
+    ((contains? type-extension-heads head) role/type-extension)
     ((= head "defn")
      (role/routine (routine-visibility form names)))
     ((= head "deftask") (role/routine visibility/exported))
     ((= head "deftest") role/test)
-    ((contains? (vec "defmacro" "defrule") head) role/macro)
+    ((contains? macro-heads head) role/macro)
     ((= head "type") role/signature)
     (else role/loose)))
 

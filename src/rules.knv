@@ -1,7 +1,7 @@
 (use ordering ranking-violations rankings)
 (use signatures signature-violations)
 (use stepdown stepdown-groups stepdown-violations)
-(use violations violation)
+(use violations violation violation-line)
 
 (export definitions->violations)
 
@@ -18,9 +18,6 @@
     (push-all! (mut found) (signature-violations definitions))
     (sort-by! found violation-line)
     found))
-
-(defn violation-line (violation)
-  (:line (:subject violation)))
 
 (type push-all!
   (fn ((mut (vec violation)) (vec violation))

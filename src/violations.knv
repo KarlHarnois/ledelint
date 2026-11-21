@@ -1,6 +1,7 @@
 (use outline definition)
 
-(export ->violation collected-violations rule violation)
+(export ->violation collected-violations rule violation
+        violation-line)
 
 (defstruct violation
   :rule rule
@@ -27,3 +28,6 @@
           ((some violation) (push! found (clone violation)))
           (none (do)))))
     found))
+
+(defn violation-line (violation)
+  (:line (:subject violation)))

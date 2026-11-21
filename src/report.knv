@@ -1,10 +1,10 @@
-(use violations rule)
+(use violations rule violation-line)
 
 (export problem->line violation->line)
 
 (defn violation->line (path violation)
   (problem->line path
-                 (:line (:subject violation))
+                 (violation-line violation)
                  (rule->code (:rule violation))
                  (as-str (violation->message violation))))
 
@@ -36,8 +36,13 @@
                             "the signature of " subject
                             " belongs directly above its definition, not above "
                             witness))
-      (_ (str subject " is used by " witness
-              ", so it belongs below it")))))
+      (type-stepdown (stepdown-message subject witness))
+      (constant-stepdown (stepdown-message subject witness))
+      (function-stepdown (stepdown-message subject witness)))))
+
+(defn stepdown-message (subject witness)
+  (str subject " is used by " witness
+       ", so it belongs below it"))
 
 (defn quoted-name (definition)
   (str "`" (:name definition) "`"))

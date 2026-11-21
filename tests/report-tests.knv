@@ -1,6 +1,6 @@
 (use outline forms->definitions)
 (use reader text->forms)
-(use report violation->line)
+(use report problem->line violation->line)
 (use rules definitions->violations)
 
 (def stepdown-source
@@ -18,3 +18,7 @@
 (deftest line-names-file-line-and-rule
   (assert (= (report-lines)
              (vec (str "src/shop.knv:1: function-stepdown: `tax` is used by `order-total` (line 3), so it belongs below it")))))
+
+(deftest formats-a-problem-line
+  (assert (= (problem->line "a.knv" 2 "code" "message")
+             (str "a.knv:2: code: message"))))
