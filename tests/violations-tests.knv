@@ -1,16 +1,10 @@
-(use outline forms->definitions)
-(use reader text->forms)
+(use support definitions-of)
 
 (use violations ->violation collected-violations rule
                 violation-line)
 
-(defn definitions-of (text)
-  (match (text->forms text)
-    ((ok forms) (forms->definitions forms))
-    ((err _) (vec))))
-
 (deftest keeps-present-violations
-  (let (subject (unwrap (first (definitions-of "(def tax 1)")))
+  (let (subject (unwrap (first (unwrap-ok (definitions-of "(def tax 1)"))))
         finding (->violation :rule rule/section-order
                              :subject (clone subject)
                              :witness none))
@@ -22,7 +16,7 @@
              (vec))))
 
 (deftest reads-the-line-of-a-violation
-  (let (subject (unwrap (first (definitions-of "(def tax 1)")))
+  (let (subject (unwrap (first (unwrap-ok (definitions-of "(def tax 1)"))))
         finding (->violation :rule rule/section-order
                              :subject (clone subject)
                              :witness none))

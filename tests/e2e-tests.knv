@@ -31,11 +31,6 @@
   (rust "std::env::current_dir().map(|path| path.display().to_string()).unwrap_or_default()"
     (fn () string)))
 
-(def run-raw
-  (rust "std::process::Command::new({0}).args({1}).output().map(|output| (output.status.code().unwrap_or(-1), (String::from_utf8_lossy(&output.stdout).to_string(), String::from_utf8_lossy(&output.stderr).to_string()))).map_err(|failure| failure.to_string())"
-    (fn ((ref str) (ref (vec string)))
-      (result (pair i32 (pair string string)) string))))
-
 (def run-raw-in
   (rust "std::process::Command::new({0}).args({1}).current_dir({2}).output().map(|output| (output.status.code().unwrap_or(-1), (String::from_utf8_lossy(&output.stdout).to_string(), String::from_utf8_lossy(&output.stderr).to_string()))).map_err(|failure| failure.to_string())"
     (fn ((ref str) (ref (vec string)) (ref str))
@@ -45,7 +40,7 @@
   (rust "{{ static BUILT: std::sync::OnceLock<bool> = std::sync::OnceLock::new(); *BUILT.get_or_init({0}) }}"
     (fn ((fn () bool)) bool)))
 
-(defstruct command
+(defstruct invocation
   :program string
   :args (vec string))
 
@@ -75,30 +70,28 @@
        "\")))\n"))
 
 (defn run-ledelint (root)
-  (run-command (->command :program (str (binary))
-                          :args (vec root))))
+  (run-command (->invocation :program (str (binary))
+                             :args (vec root))))
 
 (defn run-ledelint-args (args)
-  (run-command (->command :program (str (binary)) :args args)))
+  (run-command (->invocation :program (str (binary)) :args args)))
 
 (defn binary ()
   (assert (once build-succeeds?))
   binary-path)
 
 (defn build-succeeds? ()
-  (match (run-command (->command :program (str "knave")
-                                 :args (vec (str "build"))))
+  (match (run-command (->invocation :program (str "knave")
+                                    :args (vec (str "build"))))
     ((ok output) (= (:code output) 0))
     ((err _) false)))
 
-(defn run-command (command)
-  (map-ok (run-raw (as-str (:program command))
-                   (ref (:args command)))
-          output-of-raw))
+(defn run-command (invocation)
+  (run-command-in (current-directory) invocation))
 
-(defn run-command-in (directory command)
-  (map-ok (run-raw-in (as-str (:program command))
-                      (ref (:args command))
+(defn run-command-in (directory invocation)
+  (map-ok (run-raw-in (as-str (:program invocation))
+                      (ref (:args invocation))
                       (as-str directory))
           output-of-raw))
 
@@ -187,8 +180,9 @@
 (deftest consumer-task-reports-and-exits
   (let (root (consumer-project "consumer")
         output (unwrap-ok (run-command-in root
-                                          (->command :program (str "knave")
-                                                     :args (vec (str "task")
+                                          (->invocation :program (str "knave")
+                                                        :args (vec
+                                                                (str "task")
                                                                 (str "ledelint")
                                                                 (str "--path")
                                                                 (str "bad"))))))

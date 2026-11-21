@@ -28,8 +28,8 @@
     (option definition)))
 
 (defn first-outranking (definitions position subject-rank ranking)
-  (-> (range 0 position)
-      (map (fn (earlier) (at definitions earlier)))
+  (-> definitions iter
+      (take position)
       (find (fn (earlier)
               (outranks? (deref earlier) subject-rank ranking)))
       (map-some clone)))

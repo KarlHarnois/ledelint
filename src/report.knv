@@ -2,11 +2,17 @@
 
 (export problem->line violation->line)
 
+(defstruct rendering
+  :code string
+  :message string)
+
 (defn violation->line (path violation)
-  (problem->line path
-                 (violation-line violation)
-                 (rule->code (:rule violation))
-                 (as-str (violation->message violation))))
+  (let-match ((rendering :code code :message message) (describe-violation
+                                                        violation))
+    (problem->line path
+                   (violation-line violation)
+                   (as-str code)
+                   (as-str message))))
 
 (type problem->line
   (fn ((ref str) int (ref str) (ref str))
@@ -15,34 +21,38 @@
 (defn problem->line (path line code message)
   (str path ":" line ": " code ": " message))
 
-(defn rule->code (rule)
-  (match rule
-    (section-order "section-order")
-    (public-first "public-first")
-    (type-stepdown "type-stepdown")
-    (constant-stepdown "constant-stepdown")
-    (function-stepdown "function-stepdown")
-    (signature-adjacent "signature-adjacent")))
-
-(defn violation->message (violation)
+(defn describe-violation (violation)
   (let (subject (quoted-name (:subject violation))
         witness (witness->text (:witness violation)))
     (match (:rule violation)
-      (section-order (str subject " belongs above " witness
-                          ": header, then constants, then types, then functions, then tests"))
-      (public-first (str subject " belongs above " witness
-                         ": main first, then exported functions, then private ones"))
-      (signature-adjacent (str
-                            "the signature of " subject
-                            " belongs directly above its definition, not above "
-                            witness))
-      (type-stepdown (stepdown-message subject witness))
-      (constant-stepdown (stepdown-message subject witness))
-      (function-stepdown (stepdown-message subject witness)))))
+      (section-order (->rendering :code (str "section-order")
+                                  :message (str subject
+                                                " belongs above "
+                                                witness
+                                                ": header, then constants, then types, then functions, then tests")))
+      (public-first (->rendering :code (str "public-first")
+                                 :message (str subject
+                                               " belongs above "
+                                               witness
+                                               ": main first, then exported functions, then private ones")))
+      (signature-adjacent (->rendering :code (str "signature-adjacent")
+                                       :message (str "the signature of "
+                                                     subject
+                                                     " belongs directly above its definition, not above "
+                                                     witness)))
+      (type-stepdown (stepdown-description subject witness
+                                           (str "type-stepdown")))
+      (constant-stepdown (stepdown-description subject
+                                               witness
+                                               (str "constant-stepdown")))
+      (function-stepdown (stepdown-description subject
+                                               witness
+                                               (str "function-stepdown"))))))
 
-(defn stepdown-message (subject witness)
-  (str subject " is used by " witness
-       ", so it belongs below it"))
+(defn stepdown-description (subject witness code)
+  (->rendering :code code
+               :message (str subject " is used by " witness
+                             ", so it belongs below it")))
 
 (defn quoted-name (definition)
   (str "`" (:name definition) "`"))
