@@ -10,20 +10,18 @@
 (defstruct settings
   :root string)
 
-(defn run (settings) (settings->problems settings))
+(defn run (settings)
+  (let (found (vec))
+    (for-each (iter (knave-files-under (as-str (:root settings))))
+      (fn (path)
+        (push-file-problems! (mut found) (as-str path))))
+    found))
 
 (defn print-problems (problems)
   (for-each (iter problems)
     (fn (problem) (println problem)))
   (when (not (empty? problems))
     (eprintln "ledelint found " (len problems) " problem(s)")))
-
-(defn settings->problems (settings)
-  (let (found (vec))
-    (for-each (iter (knave-files-under (as-str (:root settings))))
-      (fn (path)
-        (push-file-problems! (mut found) (as-str path))))
-    found))
 
 (defn push-file-problems! (found path)
   (for-each (iter (file-problems path))

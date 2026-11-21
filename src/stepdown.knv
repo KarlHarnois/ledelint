@@ -55,13 +55,17 @@
                :witness (some (clone caller))))
 
 (defn member? (group role)
-  (match group
-    (public-types (public-type? role))
-    (private-types (private-type? role))
-    (constants (constant? role))
-    (public-routines (public-routine? role))
-    (private-routines (private-routine? role))
-    (tests (test? role))))
+  (= (some group) (role->group role)))
+
+(defn role->group (role)
+  (match role
+    ((data-type visibility/private) (some group/private-types))
+    ((data-type _) (some group/public-types))
+    (constant (some group/constants))
+    ((routine visibility/private) (some group/private-routines))
+    ((routine _) (some group/public-routines))
+    (test (some group/tests))
+    (_ none)))
 
 (defn group->rule (group)
   (match group
@@ -71,30 +75,3 @@
     (public-routines rule/function-stepdown)
     (private-routines rule/function-stepdown)
     (tests rule/function-stepdown)))
-
-(defn public-type? (role)
-  (match role
-    ((data-type visibility/exported) true)
-    (_ false)))
-
-(defn private-type? (role)
-  (match role
-    ((data-type visibility/private) true)
-    (_ false)))
-
-(defn constant? (role)
-  (match role (constant true) (_ false)))
-
-(defn public-routine? (role)
-  (match role
-    ((routine visibility/private) false)
-    ((routine _) true)
-    (_ false)))
-
-(defn private-routine? (role)
-  (match role
-    ((routine visibility/private) true)
-    (_ false)))
-
-(defn test? (role)
-  (match role (test true) (_ false)))

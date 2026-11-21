@@ -16,9 +16,9 @@
   (unknown-option string)
   (unexpected-argument string))
 
-(defstruct scan
-  :stop (option scan-stop)
-  :directory (option string))
+(defenum scan
+  (scanning (option string))
+  (stopped scan-stop))
 
 (defenum scan-stop
   help
@@ -39,13 +39,13 @@
      (str "ledelint: unexpected argument '" argument "'"))))
 
 (defn scan->result (scan)
-  (let (stop (clone (:stop scan)))
-    (match stop
-      (none (ok (command/lint (directory-or-default scan))))
-      ((some stop) (stop->result stop)))))
+  (match scan
+    ((scanning directory)
+     (ok (command/lint (directory-or-default directory))))
+    ((stopped stop) (stop->result stop))))
 
-(defn directory-or-default (scan)
-  (match (:directory scan)
+(defn directory-or-default (directory)
+  (match directory
     (none (str "."))
     ((some directory) (clone directory))))
 
@@ -54,45 +54,31 @@
     (help (ok command/help))
     ((failure failure) (err failure))))
 
-(defn initial-scan () (->scan :stop none :directory none))
+(defn initial-scan () (scan/scanning none))
 
 (defn scan-step (scan argument)
-  (if (stopped? scan) scan (scan-argument scan argument)))
-
-(defn stopped? (scan)
-  (match (:stop scan)
-    ((some _) true)
-    (none false)))
+  (match (clone scan)
+    ((scanning directory) (scan-argument directory argument))
+    ((stopped _) scan)))
 
 (type scan-argument
-  (fn (scan (ref string)) scan))
+  (fn ((option string) (ref string)) scan))
 
-(defn scan-argument (scan argument)
+(defn scan-argument (directory argument)
   (cond
-    ((help-flag? argument) (stop-scan scan scan-stop/help))
+    ((help-flag? argument) (scan/stopped scan-stop/help))
     ((option? argument)
-     (fail-scan scan
-                (argument-error/unknown-option (str argument))))
-    (else (push-directory scan argument))))
-
-(defn stop-scan (scan stop)
-  (->scan :stop (some stop)
-          :directory (clone (:directory scan))))
+     (scan/stopped (scan-stop/failure (argument-error/unknown-option (str argument)))))
+    (else (push-directory directory argument))))
 
 (type push-directory
-  (fn (scan (ref string)) scan))
+  (fn ((option string) (ref string)) scan))
 
-(defn push-directory (scan argument)
-  (let (directory (clone (:directory scan)))
-    (match directory
-      (none (->scan :stop none :directory (some (str argument))))
-      ((some _)
-       (fail-scan scan
-                  (argument-error/unexpected-argument (str argument)))))))
-
-(defn fail-scan (scan failure)
-  (->scan :stop (some (scan-stop/failure failure))
-          :directory (clone (:directory scan))))
+(defn push-directory (directory argument)
+  (match directory
+    (none (scan/scanning (some (str argument))))
+    ((some _)
+     (scan/stopped (scan-stop/failure (argument-error/unexpected-argument (str argument)))))))
 
 (defn help-flag? (argument)
   (or (= argument "-h") (= argument "--help")))

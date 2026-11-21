@@ -1,4 +1,5 @@
-(use reader reader-error text->forms)
+(use reader error->message error-line reader-error
+            text->forms)
 
 (deftest comments-and-strings-hide-their-parentheses
   (assert (ok? (text->forms "(def note \"a ) in text\") ; a ( in a comment"))))
@@ -21,3 +22,17 @@
 (deftest extra-parenthesis-is-a-stray-close
   (assert (= (text->forms "(def tax-rate 15))")
              (err (reader-error/stray-close 1)))))
+
+(deftest names-each-reader-failure
+  (assert (= (vec (error->message (reader-error/unclosed-list 3))
+                  (error->message (reader-error/unclosed-string 4))
+                  (error->message (reader-error/stray-close 5)))
+             (vec (str "the list opened on line 3 is never closed")
+                  (str "the string opened on line 4 is never closed")
+                  (str "line 5 closes a list that was never opened")))))
+
+(deftest reports-the-line-of-each-reader-failure
+  (assert (= (vec (error-line (reader-error/unclosed-list 3))
+                  (error-line (reader-error/unclosed-string 4))
+                  (error-line (reader-error/stray-close 5)))
+             (vec 3 4 5))))
