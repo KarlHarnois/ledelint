@@ -1,14 +1,24 @@
+(use arguments arguments->command command error->message
+               usage)
+
 (use lib ->settings print-problems run)
 
 (defn main ()
-  (let (arguments (command-line-args)
-        problems (run (->settings :root (root-argument arguments))))
+  (match (arguments->command (command-line-args))
+    ((ok command) (execute command))
+    ((err failure) (fail failure))))
+
+(defn execute (command)
+  (match command
+    (help (println usage))
+    ((lint root) (lint-root root))))
+
+(defn lint-root (root)
+  (let (problems (run (->settings :root root)))
     (print-problems problems)
     (when (not (empty? problems)) (exit 1))))
 
-(defn root-argument (arguments)
-  (-> arguments iter
-      (find (fn (argument)
-              (not (starts-with? argument "--"))))
-      (map-some clone)
-      (unwrap-or (str "."))))
+(defn fail (failure)
+  (eprintln (error->message failure))
+  (eprintln usage)
+  (exit 1))

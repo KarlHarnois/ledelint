@@ -1,0 +1,46 @@
+(use arguments argument-error arguments->command command
+               error->message)
+
+(deftest defaults-to-the-current-directory
+  (assert (= (arguments->command (vec))
+             (ok (command/lint (str "."))))))
+
+(deftest reads-the-path-argument
+  (assert (= (arguments->command (vec (str "src")))
+             (ok (command/lint (str "src"))))))
+
+(deftest reads-the-short-help-flag
+  (assert (= (arguments->command (vec (str "-h")))
+             (ok command/help))))
+
+(deftest reads-the-long-help-flag
+  (assert (= (arguments->command (vec (str "--help")))
+             (ok command/help))))
+
+(deftest reads-help-after-a-path
+  (assert (= (arguments->command (vec (str "src") (str "--help")))
+             (ok command/help))))
+
+(deftest help-before-a-bad-option-helps
+  (assert (= (arguments->command (vec (str "--help") (str "--verbose")))
+             (ok command/help))))
+
+(deftest a-bad-option-before-help-fails
+  (assert (= (arguments->command (vec (str "--verbose") (str "--help")))
+             (err (argument-error/unknown-option (str "--verbose"))))))
+
+(deftest rejects-an-unknown-option
+  (assert (= (arguments->command (vec (str "--verbose")))
+             (err (argument-error/unknown-option (str "--verbose"))))))
+
+(deftest rejects-a-second-path
+  (assert (= (arguments->command (vec (str "src") (str "tests")))
+             (err (argument-error/unexpected-argument (str "tests"))))))
+
+(deftest names-the-unknown-option
+  (assert (= (error->message (argument-error/unknown-option (str "--verbose")))
+             (str "ledelint: unrecognized option '--verbose'"))))
+
+(deftest names-the-unexpected-argument
+  (assert (= (error->message (argument-error/unexpected-argument (str "tests")))
+             (str "ledelint: unexpected argument 'tests'"))))

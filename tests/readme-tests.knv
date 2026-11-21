@@ -1,0 +1,21 @@
+(use arguments usage)
+
+(defn readme-usage (text)
+  (match (-> (split text "## Usage") collect second)
+    (none none)
+    ((some after-usage) (first-text-block after-usage))))
+
+(defn first-text-block (text)
+  (match (-> (split text "```text\n") collect second)
+    (none none)
+    ((some after-fence) (before-closing-fence after-fence))))
+
+(defn before-closing-fence (text)
+  (match (-> (split text "\n```") collect first)
+    (none none)
+    ((some block) (some (str block)))))
+
+(deftest readme-usage-matches-help
+  (let (text (unwrap-ok (slurp "README.md")))
+    (assert (= (readme-usage (as-str text))
+               (some (clone usage))))))
