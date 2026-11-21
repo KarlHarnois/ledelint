@@ -2,12 +2,12 @@
 
 (export problem->line violation->line)
 
-(defstruct rendering
+(defstruct diagnostic
   :code string
   :message string)
 
 (defn violation->line (path violation)
-  (let-match ((rendering code message) (describe-violation violation))
+  (let-match ((diagnostic code message) (describe-violation violation))
     (problem->line path
                    (violation-line violation)
                    (as-str code)
@@ -52,7 +52,7 @@
                ", so it belongs below it")))
 
 (defn render (code message)
-  (->rendering :code code :message message))
+  (->diagnostic :code code :message message))
 
 (defn quoted-name (definition)
   (str "`" (:name definition) "`"))
