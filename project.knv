@@ -1,3 +1,4 @@
 (defproject ledelint
   :knave "0.21.1"
-  (lints (needless-type deny)))
+  (lints (needless-type deny))
+  (exported-tasks ledelint))

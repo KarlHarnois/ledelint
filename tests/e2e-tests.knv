@@ -12,14 +12,6 @@
 
 (def broken-source (str "(defn total (order)\n"))
 
-(def consumer-task
-  (str "(use ledelint ->settings print-problems run)\n" "\n"
-       "(deftask ledelint (:path string \".\")\n"
-       "  (let (problems (run (->settings :root (str path))))\n"
-       "    (print-problems problems)\n"
-       "    (when (not (empty? problems))\n"
-       "      (exit 1))))\n"))
-
 (def process-id
   (rust "std::process::id()" (fn () u32)))
 
@@ -55,11 +47,9 @@
         project-file (consumer-project-file)
         main (file-path root "src/main.knv")
         main-source (str "(defn main () (do))\n")
-        task (file-path root "tasks/newspaper.knv")
         bad (file-path root "bad/shop.knv"))
     (write-file! (as-str project) (as-str project-file))
     (write-file! (as-str main) (as-str main-source))
-    (write-file! (as-str task) (as-str consumer-task))
     (write-file! (as-str bad) (as-str dirty-source))
     root))
 
