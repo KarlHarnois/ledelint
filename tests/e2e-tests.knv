@@ -64,7 +64,7 @@
     root))
 
 (defn consumer-project-file ()
-  (str "(defproject consumer :knave \"0.21.0\"\n"
+  (str "(defproject consumer :knave \"0.21.1\"\n"
        "  (libraries (ledelint :path \""
        (current-directory)
        "\")))\n"))
