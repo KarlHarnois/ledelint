@@ -170,7 +170,7 @@
     (assert (= (:stdout output) ""))
     (assert (= (:stderr output)
                (str "error: unknown option `--verbose`\n\n"
-                    "Usage: ledelint [OPTIONS] [path]\n\n"
+                    "Usage: ledelint [OPTIONS] [PATH]\n\n"
                     "For more information, try `ledelint --help`.\n")))))
 
 (deftest consumer-task-reports-and-exits

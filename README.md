@@ -20,10 +20,10 @@ ledelint needs Knave 0.21.2 or newer. ledelint has no release yet, so pin a comm
 ```text
 Checks that each Knave file reads top-down, like a newspaper.
 
-Usage: ledelint [OPTIONS] [path]
+Usage: ledelint [OPTIONS] [PATH]
 
 Arguments:
-  [path]         The directory to lint [default: .]
+  [PATH]         The directory to lint [default: .]
 
 Options:
   -h, --help     Print help
