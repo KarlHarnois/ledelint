@@ -33,6 +33,8 @@ jobs:
         with:
           path: *knave-files
           key: ${{ steps.knave-cache.outputs.cache-primary-key }}
+      - name: Fetch the libraries
+        run: knave check
       - name: Check the layout
         run: knave fmt --check
       - name: Lint

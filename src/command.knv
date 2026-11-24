@@ -1,0 +1,7 @@
+(use knave-commandant defcommand)
+
+(export ledelint ledelint-spec matches->ledelint)
+
+(defcommand ledelint "Checks that each Knave file reads top-down, like a newspaper."
+  :version "0.1.0"
+  (path string :default "." :about "The directory to lint"))

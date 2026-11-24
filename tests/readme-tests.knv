@@ -1,4 +1,7 @@
-(use arguments usage)
+(use command ledelint-spec)
+(use knave-commandant spec->help)
+
+(def help-width 80)
 
 (defn readme-usage (text)
   (match (-> (split text "## Usage") collect second)
@@ -18,4 +21,4 @@
 (deftest readme-usage-matches-help
   (let (text (unwrap-ok (slurp "README.md")))
     (assert (= (readme-usage (as-str text))
-               (some (clone usage))))))
+               (some (spec->help (ref (ledelint-spec)) help-width))))))
