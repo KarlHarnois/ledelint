@@ -1,4 +1,7 @@
 (defproject ledelint
-  :knave "0.21.1"
+  :knave "0.21.2"
+  (libraries
+    (knave-commandant :git "https://github.com/KarlHarnois/knave-commandant"
+                      :rev "67772f9acc11c77e6e87b3ebb0ce245b03340089"))
   (lints (needless-type deny))
   (exported-tasks ledelint))

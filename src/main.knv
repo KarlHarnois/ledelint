@@ -1,24 +1,12 @@
-(use arguments arguments->command command error->message
-               usage)
-
+(use command ledelint ledelint-spec matches->ledelint)
+(use knave-commandant run-command)
 (use lib ->settings print-problems run)
 
 (defn main ()
-  (match (arguments->command (command-line-args))
-    ((ok command) (execute command))
-    ((err failure) (fail failure))))
-
-(defn execute (command)
-  (match command
-    (help (println usage))
-    ((lint root) (lint-root root))))
+  (let-match ((ledelint path) (run-command ledelint))
+    (lint-root path)))
 
 (defn lint-root (root)
   (let (problems (run (->settings :root root)))
     (print-problems problems)
     (when (not (empty? problems)) (exit 1))))
-
-(defn fail (failure)
-  (eprintln (error->message failure))
-  (eprintln usage)
-  (exit 1))

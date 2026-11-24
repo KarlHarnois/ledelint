@@ -1,4 +1,7 @@
-(use arguments argument-error error->message usage)
+(use command ledelint-spec)
+(use knave-commandant spec->help)
+
+(def help-width 80)
 
 (def binary-path "target/knave/ledelint/ledelint")
 
@@ -156,16 +159,19 @@
 (deftest help-prints-usage-and-exits-zero
   (let (output (unwrap-ok (run-ledelint-args (vec (str "--help")))))
     (assert (= (:code output) 0))
-    (assert (= (:stdout output) (str usage "\n")))
+    (assert (= (:stdout output)
+               (str (spec->help (ref (ledelint-spec)) help-width)
+                    "\n")))
     (assert (= (:stderr output) ""))))
 
-(deftest unknown-option-fails-with-usage
+(deftest unknown-option-fails-with-usage-and-exits-two
   (let (output (unwrap-ok (run-ledelint-args (vec (str "--verbose")))))
-    (assert (= (:code output) 1))
+    (assert (= (:code output) 2))
     (assert (= (:stdout output) ""))
     (assert (= (:stderr output)
-               (str (error->message (argument-error/unknown-option (str "--verbose")))
-                    "\n" usage "\n")))))
+               (str "error: unknown option `--verbose`\n\n"
+                    "Usage: ledelint [OPTIONS] [PATH]\n\n"
+                    "For more information, try `ledelint --help`.\n")))))
 
 (deftest consumer-task-reports-and-exits
   (let (root (consumer-project "consumer")

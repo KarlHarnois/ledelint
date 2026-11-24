@@ -11,6 +11,10 @@
       (map clone)
       collect))
 
+(type calls?
+  (fn ((ref definition) (ref definition))
+    bool))
+
 (defn calls? (caller callee)
   (and (not= (:name caller) (:name callee))
        (contains? (:references caller)

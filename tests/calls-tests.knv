@@ -1,11 +1,20 @@
 (use calls acyclic-callers)
+(use outline definition)
 (use support definitions-of)
+
+(type names
+  (fn ((ref (vec definition)))
+    (vec string)))
 
 (defn names (definitions)
   (-> definitions iter
       (map (fn (definition)
              (clone (:name definition))))
       collect))
+
+(type named
+  (fn (string (ref (vec definition)))
+    (option definition)))
 
 (defn named (name definitions)
   (-> definitions iter
