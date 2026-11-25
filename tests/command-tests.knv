@@ -1,15 +1,15 @@
-(use command ledelint-spec matches->ledelint)
-(use knave-commandant ->environment outcome parse)
+(use command ledelint ledelint-spec matches->ledelint)
+(use knave-commandant ->environment parse-command)
 
 (defn path-after (texts)
-  (match (parse (ref (ledelint-spec))
-                (ref (->environment :variables (vec)))
-                (ref (collect (map (iter texts)
-                                (fn (text) (str (deref text)))))))
-    ((parsed found)
-     (map-ok (matches->ledelint (ref found))
-       (fn (command) (clone (:path command)))))
-    (_ (ok (str "not parsed")))))
+  (map-ok (parse-command ledelint
+                         (->environment :variables (vec))
+                         (collect (map (iter texts)
+                                    (fn (text) (str (deref text))))))
+          command->path))
+
+(defn command->path (command)
+  (let-match ((ledelint path) command) path))
 
 (deftest the-path-defaults-to-the-current-directory
   (assert (= (path-after (the (vec (ref str)) (vec)))

@@ -2,6 +2,6 @@
   :knave "0.21.2"
   (libraries
     (knave-commandant :git "https://github.com/KarlHarnois/knave-commandant"
-                      :rev "994efbf52804ccdae58340df660bcd0d9f399980"))
+                      :rev "eaec4a2632d02a0919cbd06fd4ead8f2936f4599"))
   (lints (needless-type deny))
   (exported-tasks ledelint))
