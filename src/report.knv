@@ -1,4 +1,3 @@
-(use outline definition)
 (use violations rule violation-line)
 
 (export problem->line violation->line)
@@ -54,9 +53,6 @@
   (->diagnostic :code code
                 :message (str subject " is used by " witness
                               ", so it belongs below it")))
-
-(type quoted-name
-  (fn ((ref definition)) string))
 
 (defn quoted-name (definition)
   (str "`" (:name definition) "`"))
