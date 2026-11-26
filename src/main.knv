@@ -1,9 +1,9 @@
 (use command ledelint ledelint-spec matches->ledelint)
-(use knave-commandant run-command)
+(use knave-commandant parse-args)
 (use lib ->settings print-problems run)
 
 (defn main ()
-  (let-match ((ledelint path) (run-command ledelint))
+  (let-match ((ledelint path) (parse-args ledelint))
     (lint-root path)))
 
 (defn lint-root (root)

@@ -1,11 +1,11 @@
 (use command ledelint ledelint-spec matches->ledelint)
-(use knave-commandant ->environment parse-command)
+(use knave-commandant ->environment parse-args-from)
 
 (defn path-after (texts)
-  (map-ok (parse-command ledelint
-                         (->environment :variables (vec))
-                         (collect (map (iter texts)
-                                    (fn (text) (str (deref text))))))
+  (map-ok (parse-args-from ledelint
+                           (->environment :variables (vec))
+                           (collect (map (iter texts)
+                                      (fn (text) (str (deref text))))))
           command->path))
 
 (defn command->path (command)
