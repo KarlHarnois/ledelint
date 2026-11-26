@@ -99,9 +99,6 @@
     ((whitespace? character) character-class/blank)
     (else character-class/word)))
 
-(type single-token
-  (fn (token-kind (ref cursor)) lexeme))
-
 (defn single-token (kind start)
   (->lexeme :token (some (->token :kind kind :line (:line start)))
             :next (advance start 1)))
@@ -138,10 +135,6 @@
     (none none)
     ((some character)
      (quote-search-step characters position (deref character)))))
-
-(type text-lexeme
-  (fn ((ref (vec char)) (ref cursor) int)
-    lexeme))
 
 (defn text-lexeme (characters start end)
   (->lexeme :token (some (->token :kind token-kind/text :line (:line start)))
@@ -204,10 +197,6 @@
     (if (empty? parents)
       (ok forms)
       (err (reader-error/unclosed-list line)))))
-
-(type place
-  (fn (assembly (ref token))
-    (result assembly reader-error)))
 
 (defn place (progress token)
   (let (line (:line token))

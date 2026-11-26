@@ -1,8 +1,6 @@
 (use calls acyclic-callers)
-(use outline definition role visibility)
-
-(use violations ->violation collected-violations rule
-                violation)
+(use outline role visibility)
+(use violations ->violation collected-violations rule)
 
 (export group stepdown-groups stepdown-violations)
 
@@ -39,10 +37,6 @@
       (none none)
       ((some first-caller)
        (above-caller callee first-caller group)))))
-
-(type above-caller
-  (fn ((ref definition) (ref definition) group)
-    (option violation)))
 
 (defn above-caller (callee caller group)
   (if (< (:line callee) (:line caller))
